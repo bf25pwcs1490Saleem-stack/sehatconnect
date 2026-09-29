@@ -361,6 +361,120 @@ def mark_done(appt_id):
     save_data(APPOINTMENTS_FILE, appointments)
     flash("Marked as done.", "success")
     return redirect(url_for("admin_dashboard"))
+@app.route("/admin/appointment/<int:appt_id>/done", methods=["POST"])
+def mark_done(appt_id):
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    appointments = load_data(APPOINTMENTS_FILE)
+    for a in appointments:
+        if a["id"] == appt_id:
+            a["status"] = "Done"
+    save_data(APPOINTMENTS_FILE, appointments)
+    flash("Marked as done.", "success")
+    return redirect(url_for("admin_dashboard"))# ==================== FEEDBACK ROUTES ====================
+@app.route("/feedback", methods=["GET", "POST"])
+def feedback():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        phone = request.form.get("phone", "").strip()
+        rating = request.form.get("rating", "5")
+        message = request.form.get("message", "").strip()
+        doctor_name = request.form.get("doctor_name", "").strip()
+
+        if not name or not message:
+            flash("Name and message are required.", "error")
+            return render_template("feedback.html")
+
+        feedbacks = load_data("feedbacks.json")
+        if not isinstance(feedbacks, list):
+            feedbacks = []
+
+        new_fb = {
+            "id": len(feedbacks) + 1,
+            "name": name,
+            "phone": phone,
+            "rating": rating,
+            "message": message,
+            "doctor_name": doctor_name,
+            "time": datetime.now().isoformat()
+        }
+        feedbacks.append(new_fb)
+        save_data("feedbacks.json", feedbacks)
+
+        flash("Thank you for your feedback! ✅", "success")
+        return redirect(url_for("feedback"))
+
+    return render_template("feedback.html")
+
+
+# ==================== REFUND ROUTES ====================
+@app.route("/admin/feedback-refunds")
+def admin_feedback_refunds():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+
+    feedbacks = load_data("feedbacks.json")
+    if not isinstance(feedbacks, list):
+        feedbacks = []
+
+    refunds = load_data("refunds.json")
+    if not isinstance(refunds, list):
+        refunds = []
+
+    # List of paid appointments available for refund
+    appointments = load_data(APPOINTMENTS_FILE)
+    refundable = [a for a in appointments if a.get("payment_status") == "Paid"]
+
+    return render_template("admin_feedback_refunds.html",
+                           feedbacks=feedbacks,
+                           refunds=refunds,
+                           refundable=refundable)
+
+
+@app.route("/admin/appointment/<int:appt_id>/refund", methods=["POST"])
+def refund_appointment(appt_id):
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+
+    appointments = load_data(APPOINTMENTS_FILE)
+    target = next((a for a in appointments if a["id"] == appt_id), None)
+
+    if not target:
+        flash("Appointment not found.", "error")
+        return redirect(url_for("admin_feedback_refunds"))
+
+    if target.get("payment_status") != "Paid":
+        flash("⛔ Cannot refund: not a paid appointment.", "error")
+        return redirect(url_for("admin_feedback_refunds"))
+
+    # Mark appointment as refunded
+    target["payment_status"] = "Refunded"
+    target["status"] = "Refunded"
+    target["refunded_at"] = datetime.now().isoformat()
+    target["refunded_by"] = session.get("admin_name", "Admin")
+    target["refund_amount"] = target.get("fee", 0)
+    save_data(APPOINTMENTS_FILE, appointments)
+
+    # Save to refunds log
+    refunds = load_data("refunds.json")
+    if not isinstance(refunds, list):
+        refunds = []
+
+    refunds.append({
+        "id": len(refunds) + 1,
+        "appt_id": appt_id,
+        "patient_name": target.get("patient_name"),
+        "phone": target.get("phone"),
+        "doctor_name": target.get("doctor_name"),
+        "amount": target.get("fee", 0),
+        "method": target.get("payment_method", "N/A"),
+        "refunded_by": session.get("admin_name", "Admin"),
+        "refunded_at": datetime.now().isoformat()
+    })
+    save_data("refunds.json", refunds)
+
+    flash(f"✅ Refunded Rs. {target.get('fee', 0)} to {target.get('patient_name')}.", "success")
+    return redirect(url_for("admin_feedback_refunds"))
 
 
 if __name__ == "__main__":
