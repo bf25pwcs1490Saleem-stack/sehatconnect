@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Book — {{ doctor.name }}{% endblock %}
+
+{% block content %}
+<h1>Book Appointment</h1>
+
+<div class="doctor-info">
+  <h2>{{ doctor.name }}</h2>
+  <p><strong>Specialty:</strong> {{ doctor.specialty }}</p>
+  {% if doctor.area %}<p><strong>Area:</strong> {{ doctor.area }}</p>{% endif %}
+  <p><strong>Available:</strong> {{ doctor.days|join(', ') }} — {{ doctor.time }}</p>
+  <p><strong>Fee:</strong> Rs. {{ doctor.fee }}</p>
+</div>
+
+<form method="POST" class="form-card">
+  <label>Patient Name *
+    <input type="text" name="name" required>
+  </label>
+  <label>Phone Number *
+    <input type="text" name="phone" required placeholder="03XXXXXXXXX">
+  </label>
+  <label>Date *
+    <input type="date" name="date" required>
+  </label>
+  <label>Time *
+    <input type="text" name="time" required placeholder="e.g. 11:00 AM">
+  </label>
+  <label>Note (optional)
+    <textarea name="note" rows="2"></textarea>
+  </label>
+  <button type="submit" class="btn btn-primary">Confirm Booking</button>
+</form>
+{% endblock %}

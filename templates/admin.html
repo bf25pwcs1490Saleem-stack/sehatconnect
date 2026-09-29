@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h1>Admin Dashboard</h1>
+
+<section class="admin-section">
+  <h2>Add New Doctor</h2>
+  <form method="POST" action="{{ url_for('add_doctor') }}" class="form-card">
+    <label>Name * <input type="text" name="name" required></label>
+    <label>Specialty * <input type="text" name="specialty" required></label>
+    <label>Area <input type="text" name="area" placeholder="e.g. Hayatabad"></label>
+    <label>Days (comma separated) <input type="text" name="days" placeholder="Mon, Wed, Fri"></label>
+    <label>Time <input type="text" name="time" placeholder="10:00 AM - 2:00 PM"></label>
+    <label>Fee (Rs.) <input type="number" name="fee" value="500"></label>
+    <button type="submit" class="btn btn-primary">Add Doctor</button>
+  </form>
+</section>
+
+<section class="admin-section">
+  <h2>All Doctors ({{ doctors|length }})</h2>
+  {% if doctors %}
+    <table class="table">
+      <tr><th>ID</th><th>Name</th><th>Specialty</th><th>Area</th><th>Days</th><th>Time</th><th>Fee</th><th>Action</th></tr>
+      {% for d in doctors %}
+        <tr>
+          <td>{{ d.id }}</td>
+          <td>{{ d.name }}</td>
+          <td>{{ d.specialty }}</td>
+          <td>{{ d.area }}</td>
+          <td>{{ d.days|join(', ') }}</td>
+          <td>{{ d.time }}</td>
+          <td>{{ d.fee }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('remove_doctor', doctor_id=d.id) }}" style="display:inline">
+              <button class="btn btn-danger" onclick="return confirm('Remove doctor?')">Remove</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="empty">No doctors yet.</p>
+  {% endif %}
+</section>
+
+<section class="admin-section">
+  <h2>All Appointments ({{ appointments|length }})</h2>
+  {% if appointments %}
+    <table class="table">
+      <tr><th>ID</th><th>Patient</th><th>Phone</th><th>Doctor</th><th>Date</th><th>Time</th><th>Status</th><th>Action</th></tr>
+      {% for a in appointments %}
+        <tr>
+          <td>#{{ a.id }}</td>
+          <td>{{ a.patient_name }}</td>
+          <td>{{ a.phone }}</td>
+          <td>{{ a.doctor_name }}</td>
+          <td>{{ a.date }}</td>
+          <td>{{ a.time }}</td>
+          <td><span class="status-{{ a.status|lower }}">{{ a.status }}</span></td>
+          <td>
+            {% if a.status != "Done" %}
+              <form method="POST" action="{{ url_for('mark_done', appt_id=a.id) }}" style="display:inline">
+                <button class="btn btn-success">Mark Done</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="empty">No appointments yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

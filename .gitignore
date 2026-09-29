@@ -1,0 +1,32 @@
+# ========== PRIVATE DATA ==========
+doctors.json
+appointments.json
+analytics.json
+audit_log.json
+
+# ========== CREDENTIALS ==========
+TEAM_CREDENTIALS.txt
+credentials.json
+
+# ========== BACKUPS ==========
+backups/
+backup_lang/
+
+# ========== NGROK ==========
+ngrok.exe
+ngrok.zip
+
+# ========== PYTHON ==========
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.venv/
+
+# ========== WINDOWS ==========
+Thumbs.db
+desktop.ini
+
+# ========== LOGS ==========
+*.log

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Doctors — SehatConnect{% endblock %}
+
+{% block content %}
+<h1>Our Doctors</h1>
+
+<form method="GET" action="{{ url_for('doctors') }}" class="search-form">
+  <input type="text" name="q" placeholder="Search by name, specialty, or area..." value="{{ q }}">
+  <select name="specialty">
+    <option value="">All Specialties</option>
+    {% for s in specialties %}
+      <option value="{{ s }}" {% if s == selected_specialty %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <select name="area">
+    <option value="">All Areas</option>
+    {% for a in areas %}
+      <option value="{{ a }}" {% if a == selected_area %}selected{% endif %}>{{ a }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-primary">Search</button>
+</form>
+
+{% if doctors %}
+  <div class="doctor-grid">
+    {% for d in doctors %}
+      <div class="doctor-card">
+        <h3>{{ d.name }}</h3>
+        <p class="specialty">{{ d.specialty }}</p>
+        {% if d.area %}<p class="area">📍 {{ d.area }}</p>{% endif %}
+        <p class="days">🗓️ {{ d.days|join(', ') }}</p>
+        <p class="time">⏰ {{ d.time }}</p>
+        <p class="fee">Fee: Rs. {{ d.fee }}</p>
+        <a href="{{ url_for('book', doctor_id=d.id) }}" class="btn btn-primary">Book Appointment</a>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="empty">No doctors found. Try a different search.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}My Appointments{% endblock %}
+
+{% block content %}
+<h1>My Appointments</h1>
+
+<form method="GET" action="{{ url_for('my_appointments') }}" class="search-form">
+  <input type="text" name="phone" placeholder="Enter your phone number" value="{{ phone }}" required>
+  <button type="submit" class="btn btn-primary">Search</button>
+</form>
+
+{% if phone and appointments %}
+  <div class="appt-list">
+    {% for a in appointments %}
+      <div class="appt-card">
+        <p><strong>ID:</strong> #{{ a.id }}</p>
+        <p><strong>Doctor:</strong> {{ a.doctor_name }} ({{ a.specialty }})</p>
+        <p><strong>Date:</strong> {{ a.date }} at {{ a.time }}</p>
+        <p><strong>Status:</strong> <span class="status-{{ a.status|lower }}">{{ a.status }}</span></p>
+        {% if a.note %}<p><strong>Note:</strong> {{ a.note }}</p>{% endif %}
+        <form method="POST" action="{{ url_for('cancel', appt_id=a.id) }}">
+          <input type="hidden" name="phone" value="{{ phone }}">
+          <button type="submit" class="btn btn-danger" onclick="return confirm('Cancel this appointment?')">Cancel</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+{% elif phone %}
+  <p class="empty">No appointments found for this number.</p>
+{% endif %}
+{% endblock %}

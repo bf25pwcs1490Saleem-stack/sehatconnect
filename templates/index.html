@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Home — SehatConnect{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>Find a Doctor. Book Online.</h1>
+  <p>Skip the queue. Check doctor availability and book your appointment from home.</p>
+  <a href="{{ url_for('doctors') }}" class="btn btn-primary">🔍 Find Doctors</a>
+</section>
+
+<section class="stats">
+  <div class="stat-card">
+    <h3>{{ total_doctors }}</h3>
+    <p>Doctors</p>
+  </div>
+  <div class="stat-card">
+    <h3>{{ total_appointments }}</h3>
+    <p>Appointments Booked</p>
+  </div>
+  <div class="stat-card">
+    <h3>{{ specialties|length }}</h3>
+    <p>Specialties</p>
+  </div>
+</section>
+
+<section class="features">
+  <h2>Why SehatConnect?</h2>
+  <div class="feature-grid">
+    <div class="feature">
+      <h3>⏰ Save Time</h3>
+      <p>No more waiting in long queues at the hospital.</p>
+    </div>
+    <div class="feature">
+      <h3>📅 Check Availability</h3>
+      <p>See which doctors are available before you travel.</p>
+    </div>
+    <div class="feature">
+      <h3>📱 Easy Booking</h3>
+      <p>Book your appointment in under 1 minute.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
