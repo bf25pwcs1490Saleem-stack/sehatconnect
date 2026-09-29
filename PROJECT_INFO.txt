@@ -1,0 +1,132 @@
+==========================================================
+SEHATCONNECT PESHAWAR — PROJECT INFORMATION
+==========================================================
+
+📌 PROJECT DETAILS
+----------------------------------------------------------
+Project Name  : SehatConnect Peshawar
+Description   : Online doctor appointment booking system
+University    : UET Peshawar
+Team Size     : 4 members
+Started       : September 2026
+
+📌 GITHUB REPOSITORY
+----------------------------------------------------------
+Repo URL (Web)   : https://github.com/bf25pwcs1490Saleem-stack/sehatconnect
+Clone URL (Git)  : https://github.com/bf25pwcs1490Saleem-stack/sehatconnect.git
+Visibility       : 🔒 Private
+Owner            : bf25pwcs1490Saleem-stack
+
+📌 LIVE SITE (when running)
+----------------------------------------------------------
+Local URL      : http://127.0.0.1:5000
+Admin Login    : http://127.0.0.1:5000/admin/login
+Traffic Panel  : http://127.0.0.1:4040  (ngrok inspector)
+
+📌 ADMIN LOGIN ACCOUNTS
+----------------------------------------------------------
+Username       Password           Role
+----------------------------------------------------------
+admin          admin123           Super Admin
+member1        member1@2026       Admin
+member2        member2@2026       Admin
+member3        member3@2026       Admin
+
+⚠️ Change these passwords before real use!
+
+📌 TEAM MEMBERS
+----------------------------------------------------------
+1. Muhammad Saleem (Lead)
+   GitHub: bf25pwcs1490Saleem-stack
+   Email : bf25pwcs1490@uetpeshawar.edu.pk
+   Phone : ___________
+
+2. Team Member 2 (Name)
+   GitHub: ___________
+   Email : ___________
+   Phone : ___________
+
+3. Team Member 3 (Name)
+   GitHub: ___________
+   Email : ___________
+   Phone : ___________
+
+4. Team Member 4 (Name)
+   GitHub: ___________
+   Email : ___________
+   Phone : ___________
+
+📌 HOW TO RUN THE PROJECT
+----------------------------------------------------------
+1. Open CMD
+2. cd %USERPROFILE%\Desktop\sehatconnect
+3. python app.py
+4. Open browser → http://127.0.0.1:5000
+
+OR just double-click: go_live.bat
+
+📌 HOW TO PUSH CHANGES TO GITHUB
+----------------------------------------------------------
+git add .
+git commit -m "What you changed"
+git push
+
+📌 HOW TO GET TEAMMATE'S CHANGES
+----------------------------------------------------------
+git pull
+
+📌 SETUP FOR NEW TEAM MEMBER
+----------------------------------------------------------
+1. Install Python: https://python.org/downloads
+   ⚠️ Check "Add Python to PATH" during install
+
+2. Install Git: https://git-scm.com/download/win
+
+3. Clone the project:
+   cd %USERPROFILE%\Desktop
+   git clone https://github.com/bf25pwcs1490Saleem-stack/sehatconnect.git
+   cd sehatconnect
+
+4. Install dependencies:
+   pip install flask
+
+5. Create empty data files:
+   echo [] > doctors.json
+   echo [] > appointments.json
+   echo {} > analytics.json
+   echo [] > audit_log.json
+
+6. Run:
+   python app.py
+
+7. Open: http://127.0.0.1:5000
+
+📌 PROJECT FEATURES
+----------------------------------------------------------
+✅ Doctor search (name, specialty, area)
+✅ Online appointment booking
+✅ 2-minute auto-confirm system
+✅ Manual JazzCash/EasyPaisa payment
+✅ Admin verification
+✅ Multi-admin support (4 accounts)
+✅ Traffic analytics dashboard
+✅ Auto-backup system
+✅ Audit log
+✅ Data recovery
+
+📌 TECH STACK
+----------------------------------------------------------
+Backend  : Python 3.13 + Flask
+Frontend : HTML, CSS, JavaScript
+Storage  : JSON files
+Tunnel   : ngrok
+Git      : GitHub
+Hosting  : Render.com (planned)
+
+📌 CONTACT & SUPPORT
+----------------------------------------------------------
+For issues, contact team lead.
+
+==========================================================
+Last Updated: 28 September 2026
+==========================================================

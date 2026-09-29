@@ -30,3 +30,12 @@ desktop.ini
 
 # ========== LOGS ==========
 *.log
+# Project info with credentials
+PROJECT_INFO.txt
+QUICK_START.txt
+# Secret files — NEVER commit
+New Text Document.txt
+github_token.txt
+*_token.txt
+*.secret
+secrets.txt

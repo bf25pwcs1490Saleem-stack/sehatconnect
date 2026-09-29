@@ -1,0 +1,56 @@
+==========================================================
+SEHATCONNECT — QUICK START (For Team Members)
+==========================================================
+
+🔥 START THE PROJECT
+----------------------------------------------------------
+1. Double-click: go_live.bat
+   OR open CMD and run:
+   cd %USERPROFILE%\Desktop\sehatconnect
+   python app.py
+
+2. Open browser: http://127.0.0.1:5000
+
+3. Admin login: http://127.0.0.1:5000/admin/login
+   Username: member1
+   Password: (ask team lead)
+
+🔥 STOP THE PROJECT
+----------------------------------------------------------
+Press Ctrl + C in the CMD window
+
+🔥 PUSH YOUR CHANGES
+----------------------------------------------------------
+git pull              (get latest first)
+git add .
+git commit -m "What I changed"
+git push
+
+🔥 GET OTHERS' CHANGES
+----------------------------------------------------------
+git pull
+
+🔥 IF SOMETHING BREAKS
+----------------------------------------------------------
+Check:
+- Is Flask running? (look for "Running on 0.0.0.0:5000")
+- Is port 5000 free? (close other CMD windows)
+- Are data files there? (dir doctors.json)
+- Git error? Run: git status
+
+🔥 USEFUL LINKS
+----------------------------------------------------------
+GitHub Repo : https://github.com/bf25pwcs1490Saleem-stack/sehatconnect
+Local Site  : http://127.0.0.1:5000
+Admin Login : http://127.0.0.1:5000/admin/login
+Traffic     : http://127.0.0.1:4040
+
+🔥 IMPORTANT RULES
+----------------------------------------------------------
+1. NEVER commit doctors.json or appointments.json
+2. ALWAYS git pull before you start working
+3. ALWAYS git push when you finish
+4. If you edit files someone else might touch, tell them first
+5. Report issues to team lead
+
+==========================================================
