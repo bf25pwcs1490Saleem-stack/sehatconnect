@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Give Feedback — SehatConnect{% endblock %}
+
+{% block content %}
+<h1>Give Us Your Feedback</h1>
+
+<section class="admin-section">
+  <p>Your feedback helps us improve SehatConnect for everyone.</p>
+
+  <form method="POST" class="form-card">
+    <label>Your Name *
+      <input type="text" name="name" required>
+    </label>
+    <label>Phone (optional)
+      <input type="text" name="phone" placeholder="e.g. 03001234567">
+    </label>
+    <label>Rating *
+      <select name="rating" required>
+        <option value="" disabled selected>-- Select a rating --</option>
+        <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+        <option value="4">⭐⭐⭐⭐ Very Good</option>
+        <option value="3">⭐⭐⭐ Good</option>
+        <option value="2">⭐⭐ Fair</option>
+        <option value="1">⭐ Poor</option>
+      </select>
+    </label>
+    <label>Comments *
+      <textarea name="comments" rows="5" placeholder="Tell us about your experience..." required></textarea>
+    </label>
+    <button type="submit" class="btn btn-primary">Submit Feedback</button>
+  </form>
+</section>
+{% endblock %}

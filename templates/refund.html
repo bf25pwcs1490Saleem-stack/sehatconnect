@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Request Refund — SehatConnect{% endblock %}
+
+{% block content %}
+<h1>Request Refund Payment</h1>
+
+<section class="admin-section">
+  <p>
+    Enter your phone number and appointment ID to request a refund.
+    You can find your appointment ID on the
+    <a href="{{ url_for('my_appointments') }}">My Appointments</a> page.
+  </p>
+
+  <form method="POST" class="form-card">
+    <label>Phone Number *
+      <input type="text" name="phone" placeholder="e.g. 03001234567" required>
+    </label>
+    <label>Appointment ID *
+      <input type="number" name="appt_id" placeholder="e.g. 5" required>
+    </label>
+    <label>Reason for Refund *
+      <textarea name="reason" rows="5" placeholder="Explain why you want a refund..." required></textarea>
+    </label>
+    <button type="submit" class="btn btn-danger">Submit Refund Request</button>
+  </form>
+</section>
+{% endblock %}

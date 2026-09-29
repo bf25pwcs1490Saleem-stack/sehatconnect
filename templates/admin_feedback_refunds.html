@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Feedback & Refunds — Admin{% endblock %}
+
+{% block content %}
+<h1>Feedback & Refund Requests</h1>
+
+<p>
+  <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">← Back to Dashboard</a>
+</p>
+
+<!-- ==================== FEEDBACK SECTION ==================== -->
+<section class="admin-section">
+  <h2>Patient Feedback ({{ feedbacks|length }})</h2>
+  {% if feedbacks %}
+    <table class="table">
+      <tr>
+        <th>#</th>
+        <th>Date</th>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Rating</th>
+        <th>Comments</th>
+      </tr>
+      {% for fb in feedbacks %}
+        <tr>
+          <td>{{ fb.id }}</td>
+          <td>{{ fb.date }}</td>
+          <td>{{ fb.name }}</td>
+          <td>{{ fb.phone if fb.phone else '-' }}</td>
+          <td>
+            {% for i in range(fb.rating) %}⭐{% endfor %}
+            ({{ fb.rating }}/5)
+          </td>
+          <td>{{ fb.comments }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="empty">No feedback submitted yet.</p>
+  {% endif %}
+</section>
+
+<!-- ==================== REFUNDS SECTION ==================== -->
+<section class="admin-section">
+  <h2>Refund Requests ({{ refunds|length }})</h2>
+  {% if refunds %}
+    <table class="table">
+      <tr>
+        <th>#</th>
+        <th>Requested On</th>
+        <th>Patient</th>
+        <th>Phone</th>
+        <th>Appt ID</th>
+        <th>Doctor</th>
+        <th>Reason</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+      {% for rf in refunds %}
+        <tr>
+          <td>{{ rf.id }}</td>
+          <td>{{ rf.requested_on }}</td>
+          <td>{{ rf.patient_name }}</td>
+          <td>{{ rf.phone }}</td>
+          <td>#{{ rf.appt_id }}</td>
+          <td>{{ rf.doctor_name }}</td>
+          <td>{{ rf.reason }}</td>
+          <td>
+            <span class="status-{{ rf.status|lower }}">{{ rf.status }}</span>
+          </td>
+          <td>
+            {% if rf.status == 'Pending' %}
+              <form method="POST"
+                    action="{{ url_for('update_refund_status', refund_id=rf.id, status='Approved') }}"
+                    style="display:inline">
+                <button class="btn btn-success">Approve</button>
+              </form>
+              <form method="POST"
+                    action="{{ url_for('update_refund_status', refund_id=rf.id, status='Rejected') }}"
+                    style="display:inline">
+                <button class="btn btn-danger">Reject</button>
+              </form>
+            {% else %}
+              <span class="empty">Done</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="empty">No refund requests yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

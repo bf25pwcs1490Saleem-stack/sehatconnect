@@ -30,3 +30,6 @@ desktop.ini
 
 # ========== LOGS ==========
 *.log
+# Project info with credentials
+PROJECT_INFO.txt
+QUICK_START.txt
