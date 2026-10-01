@@ -1,94 +1,109 @@
 {% extends "base.html" %}
-{% block title %}Feedback & Refunds — Admin{% endblock %}
+{% block title %}Feedback & Refunds{% endblock %}
 
 {% block content %}
-<h1>Feedback & Refund Requests</h1>
+<h1>💬 Feedback & Refunds</h1>
 
-<p>
+<div class="admin-links">
   <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">← Back to Dashboard</a>
-</p>
+</div>
 
-<!-- ==================== FEEDBACK SECTION ==================== -->
-<section class="admin-section">
-  <h2>Patient Feedback ({{ feedbacks|length }})</h2>
-  {% if feedbacks %}
+<!-- ==================== REFUNDABLE APPOINTMENTS ==================== -->
+<div class="analytics-card">
+  <h3>💰 Refundable Appointments (Paid)</h3>
+  {% if refundable %}
     <table class="table">
       <tr>
-        <th>#</th>
-        <th>Date</th>
-        <th>Name</th>
+        <th>ID</th>
+        <th>Patient</th>
         <th>Phone</th>
-        <th>Rating</th>
-        <th>Comments</th>
+        <th>Doctor</th>
+        <th>Fee</th>
+        <th>Method</th>
+        <th>Action</th>
       </tr>
-      {% for fb in feedbacks %}
+      {% for a in refundable %}
         <tr>
-          <td>{{ fb.id }}</td>
-          <td>{{ fb.date }}</td>
-          <td>{{ fb.name }}</td>
-          <td>{{ fb.phone if fb.phone else '-' }}</td>
+          <td>#{{ a.id }}</td>
+          <td>{{ a.patient_name }}</td>
+          <td>{{ a.phone }}</td>
+          <td>{{ a.doctor_name }}</td>
+          <td>Rs. {{ a.get('fee', 0) }}</td>
+          <td>{{ a.get('payment_method', 'N/A') }}</td>
           <td>
-            {% for i in range(fb.rating) %}⭐{% endfor %}
-            ({{ fb.rating }}/5)
+            <form method="POST" action="{{ url_for('refund_appointment', appt_id=a.id) }}" style="display:inline">
+              <button type="submit" class="btn btn-warning"
+                      onclick="return confirm('Refund Rs. {{ a.get(\'fee\', 0) }} to {{ a.patient_name }}?')">
+                💰 Refund
+              </button>
+            </form>
           </td>
-          <td>{{ fb.comments }}</td>
         </tr>
       {% endfor %}
     </table>
   {% else %}
-    <p class="empty">No feedback submitted yet.</p>
+    <p class="empty">No paid appointments available for refund.</p>
   {% endif %}
-</section>
+</div>
 
-<!-- ==================== REFUNDS SECTION ==================== -->
-<section class="admin-section">
-  <h2>Refund Requests ({{ refunds|length }})</h2>
+<!-- ==================== REFUND HISTORY ==================== -->
+<div class="analytics-card">
+  <h3>📋 Refund History ({{ refunds|length }})</h3>
   {% if refunds %}
     <table class="table">
       <tr>
-        <th>#</th>
-        <th>Requested On</th>
-        <th>Patient</th>
-        <th>Phone</th>
+        <th>Refund ID</th>
         <th>Appt ID</th>
+        <th>Patient</th>
         <th>Doctor</th>
-        <th>Reason</th>
-        <th>Status</th>
-        <th>Action</th>
+        <th>Amount</th>
+        <th>Refunded By</th>
+        <th>Date</th>
       </tr>
-      {% for rf in refunds %}
+      {% for r in refunds %}
         <tr>
-          <td>{{ rf.id }}</td>
-          <td>{{ rf.requested_on }}</td>
-          <td>{{ rf.patient_name }}</td>
-          <td>{{ rf.phone }}</td>
-          <td>#{{ rf.appt_id }}</td>
-          <td>{{ rf.doctor_name }}</td>
-          <td>{{ rf.reason }}</td>
-          <td>
-            <span class="status-{{ rf.status|lower }}">{{ rf.status }}</span>
-          </td>
-          <td>
-            {% if rf.status == 'Pending' %}
-              <form method="POST"
-                    action="{{ url_for('update_refund_status', refund_id=rf.id, status='Approved') }}"
-                    style="display:inline">
-                <button class="btn btn-success">Approve</button>
-              </form>
-              <form method="POST"
-                    action="{{ url_for('update_refund_status', refund_id=rf.id, status='Rejected') }}"
-                    style="display:inline">
-                <button class="btn btn-danger">Reject</button>
-              </form>
-            {% else %}
-              <span class="empty">Done</span>
-            {% endif %}
-          </td>
+          <td>#{{ r.id }}</td>
+          <td>#{{ r.appt_id }}</td>
+          <td>{{ r.patient_name }}</td>
+          <td>{{ r.doctor_name }}</td>
+          <td>Rs. {{ r.amount }}</td>
+          <td>{{ r.refunded_by }}</td>
+          <td>{{ r.refunded_at[:19]|replace('T', ' ') }}</td>
         </tr>
       {% endfor %}
     </table>
   {% else %}
-    <p class="empty">No refund requests yet.</p>
+    <p class="empty">No refunds processed yet.</p>
   {% endif %}
-</section>
+</div>
+
+<!-- ==================== FEEDBACK ==================== -->
+<div class="analytics-card">
+  <h3>📋 Patient Feedback ({{ feedbacks|length }})</h3>
+  {% if feedbacks %}
+    <table class="table">
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Rating</th>
+        <th>Message</th>
+        <th>Time</th>
+      </tr>
+      {% for f in feedbacks %}
+        <tr>
+          <td>#{{ f.id }}</td>
+          <td>{{ f.name }}</td>
+          <td>{{ f.phone }}</td>
+          <td>{{ '⭐' * f.rating|int }}</td>
+          <td>{{ f.message }}</td>
+          <td>{{ f.time[:19]|replace('T', ' ') }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="empty">No feedback received yet.</p>
+  {% endif %}
+</div>
+
 {% endblock %}

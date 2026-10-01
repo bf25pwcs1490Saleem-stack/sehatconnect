@@ -4,25 +4,30 @@
 {% block content %}
 <h1>Admin Login</h1>
 
-<div class="login-info">
+<div class="info-box">
   <p><strong>Team Members:</strong> Use your assigned username and password.</p>
   <p><strong>Default accounts:</strong> admin, member1, member2, member3</p>
 </div>
 
 <form method="POST" class="form-card narrow">
 
-  <label>Username
-    <input type="text" name="username" required autofocus
+  <div class="field">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" required autofocus
            placeholder="e.g. admin or member1"
            autocomplete="username">
-  </label>
+  </div>
 
-  <label>Password
-    <input type="password" name="password" required
+  <div class="field">
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required
            placeholder="Enter your password"
            autocomplete="current-password">
-  </label>
+  </div>
 
-  <button type="submit" class="btn btn-primary">Login</button>
+  <button type="submit" class="btn btn-primary btn-block">
+    <i class="fa-solid fa-arrow-right-to-bracket"></i> Login
+  </button>
+
 </form>
 {% endblock %}

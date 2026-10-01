@@ -1,11 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+﻿from flask import Flask, render_template, request, redirect, url_for, session, flash
 import json
 import os
 import shutil
 import tempfile
 import threading
-import smtplib
-from email.message import EmailMessage
 from datetime import datetime, timedelta
 import time
 app = Flask(__name__)
@@ -14,54 +12,6 @@ app.secret_key = "sehatconnect_secret_key_2026"
 DOCTORS_FILE = "doctors.json"
 APPOINTMENTS_FILE = "appointments.json"
 ADMIN_PASSWORD = "admin123"
-
-try:
-    from email_config import EMAIL_SENDER, EMAIL_PASSWORD, SMTP_SERVER, SMTP_PORT, NOTIFY_ON_BOOKING
-except (ImportError, AttributeError):
-    EMAIL_SENDER = EMAIL_PASSWORD = ""
-    SMTP_SERVER, SMTP_PORT, NOTIFY_ON_BOOKING = "smtp.gmail.com", 587, True
-
-
-def send_booking_notification(appointment):
-    """Email the doctor about a new booking when SMTP and their address are configured."""
-    recipient = (appointment.get("doctor_email") or "").strip()
-    if not NOTIFY_ON_BOOKING or not recipient:
-        return False, "This doctor has no email address. Sign in to Admin, enter it in the doctor list, and save the contact."
-    if not EMAIL_SENDER or not EMAIL_PASSWORD or "your-email@gmail.com" in EMAIL_SENDER:
-        return False, "Email sender not configured: set EMAIL_SENDER and the Gmail App Password in email_config.py. The doctor email is only the recipient."
-
-    smtp_password = "".join(EMAIL_PASSWORD.split())
-    if len(smtp_password) != 16:
-        return False, "Gmail App Password must be 16 characters. A regular Gmail password will not work."
-    message = EmailMessage()
-    message["Subject"] = f"New appointment request #{appointment['id']}"
-    message["From"] = EMAIL_SENDER
-    message["To"] = recipient
-    message.set_content(
-        f"A new appointment request was received.\n\n"
-        f"Patient: {appointment['patient_name']}\n"
-        f"Phone: {appointment['phone']}\n"
-        f"Date: {appointment['date']}\n"
-        f"Time: {appointment['time']}\n"
-        f"Note: {appointment.get('note') or 'None'}\n"
-        f"Appointment ID: #{appointment['id']}\n"
-    )
-    try:
-        with smtplib.SMTP(SMTP_SERVER, int(SMTP_PORT), timeout=10) as smtp:
-            smtp.starttls()
-            smtp.login(EMAIL_SENDER, smtp_password)
-            smtp.send_message(message)
-        return True, ""
-    except smtplib.SMTPAuthenticationError as exc:
-        print(f"[APPOINTMENT EMAIL AUTH ERROR] {exc}")
-        return False, "Gmail rejected the sender login. Check EMAIL_SENDER and enter the 16-character Google App Password, not your normal Gmail password."
-    except smtplib.SMTPRecipientsRefused as exc:
-        print(f"[APPOINTMENT EMAIL RECIPIENT ERROR] {exc}")
-        return False, "Gmail rejected the doctor email address. Check the address saved for this doctor."
-    except (smtplib.SMTPException, OSError) as exc:
-        print(f"[APPOINTMENT EMAIL ERROR] {exc}")
-        return False, "Could not connect to Gmail. Check your internet connection and SMTP settings."
-
 
 # ==================== ADMIN ACCOUNTS ====================
 ADMINS = {
@@ -88,6 +38,7 @@ ADMINS = {
 }
 
 ADMIN_PASSWORD = "admin123"
+
 
 # ---------------- HELPERS ----------------
 def load_data(file):
@@ -172,7 +123,6 @@ def save_data(file, data):
 
             # Atomic replace
             os.replace(tmp_path, file)
-            return True
 
         except Exception as e:
             print(f"[SAVE ERROR] {file}: {e}")
@@ -190,7 +140,6 @@ def save_data(file, data):
                 pass
 
 
-            return False
 def next_id(data):
     if not data:
         return 1
@@ -287,17 +236,15 @@ def book(doctor_id):
             return render_template("book.html", doctor=doctor)
 
         appointments = load_data(APPOINTMENTS_FILE)
-        if not isinstance(appointments, list):
-            appointments = []
 
         for a in appointments:
-            if (isinstance(a, dict) and a.get("doctor_id") == doctor_id
-                    and a.get("date") == date
-                    and str(a.get("time", "")).lower() == time.lower()):
+            if (a["doctor_id"] == doctor_id
+                    and a["date"] == date
+                    and a["time"].lower() == time.lower()):
                 flash("This slot is already booked. Please choose another time.", "error")
                 return render_template("book.html", doctor=doctor)
 
-        new_appt = {
+                new_appt = {
             "id": next_id(appointments),
             "patient_name": name,
             "phone": phone,
@@ -318,16 +265,8 @@ def book(doctor_id):
             "requested_at": datetime.now().isoformat()
         }
         appointments.append(new_appt)
-        if not save_data(APPOINTMENTS_FILE, appointments):
-            flash("Could not save the appointment. Please try again.", "error")
-            return render_template("book.html", doctor=doctor)
-        sent, notification_error = send_booking_notification(new_appt)
-        if notification_error:
-            flash(f"Appointment booked! Your ID is #{new_appt['id']}. {notification_error}", "error")
-        elif sent:
-            flash(f"Appointment booked! Your ID is #{new_appt['id']}. The doctor was emailed.", "success")
-        else:
-            flash(f"Appointment booked! Your ID is #{new_appt['id']}.", "success")
+        save_data(APPOINTMENTS_FILE, appointments)
+        flash(f"Appointment booked! Your ID is #{new_appt['id']}", "success")
         return redirect(url_for("my_appointments", phone=phone))
 
     return render_template("book.html", doctor=doctor)
@@ -406,8 +345,6 @@ def admin_dashboard():
 
     total_doctors = len(doctors)
     total_appointments = len(appointments)
-    total_patients = len({str(a.get("phone", "")).strip() for a in appointments if isinstance(a, dict) and a.get("phone")})
-    pending_requests = sum(1 for a in appointments if isinstance(a, dict) and a.get("status") == "Requested")
     today_appointments = len([a for a in appointments if a.get("date") == today_str])
     pending_payments = len([a for a in appointments
                             if a.get("payment_status") in ("Unpaid", "Pending Verification")])
@@ -456,8 +393,6 @@ def admin_dashboard():
                            appointments=appointments,
                            total_doctors=total_doctors,
                            total_appointments=total_appointments,
-                           total_patients=total_patients,
-                           pending_requests=pending_requests,
                            today_appointments=today_appointments,
                            pending_payments=pending_payments,
                            pending_count=pending_payments,
@@ -484,9 +419,8 @@ def add_doctor():
     except:
         fee = 0
 
-    email = request.form.get("email", "").strip()
-    if not name or not specialty or not email:
-        flash("Doctor name, specialty, and email are required.", "error")
+    if not name or not specialty:
+        flash("Name and Specialty are required.", "error")
         return redirect(url_for("admin_dashboard"))
 
     doctor = {
@@ -496,34 +430,13 @@ def add_doctor():
         "area": area,
         "days": [d.strip() for d in days.split(",") if d.strip()],
         "time": time,
-        "fee": fee,
-        "email": email,
-        "phone": request.form.get("phone", "").strip()
+        "fee": fee
     }
     doctors.append(doctor)
     save_data(DOCTORS_FILE, doctors)
     flash(f"Doctor added: {name}", "success")
     return redirect(url_for("admin_dashboard"))
 
-
-@app.route("/admin/doctor/<int:doctor_id>/contact", methods=["POST"])
-def update_doctor_contact(doctor_id):
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    doctors = load_data(DOCTORS_FILE)
-    doctor = next((d for d in doctors if isinstance(d, dict) and d.get("id") == doctor_id), None)
-    if not doctor:
-        flash("Doctor not found.", "error")
-        return redirect(url_for("admin_dashboard"))
-    email = request.form.get("email", "").strip()
-    if not email:
-        flash("Doctor email is required to receive booking notifications.", "error")
-        return redirect(url_for("admin_dashboard"))
-    doctor["email"] = email
-    doctor["phone"] = request.form.get("phone", "").strip()
-    save_data(DOCTORS_FILE, doctors)
-    flash(f"Contact details updated for {doctor.get('name', 'doctor')}.", "success")
-    return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/remove-doctor/<int:doctor_id>", methods=["POST"])
 def remove_doctor(doctor_id):
@@ -652,25 +565,6 @@ def refund_appointment(appt_id):
 
     flash(f"✅ Refunded Rs. {target.get('fee', 0)} to {target.get('patient_name')}.", "success")
     return redirect(url_for("admin_feedback_refunds"))
-
-
-@app.route("/")
-def index():
-    doctors = load_data(DOCTORS_FILE) or []
-    appointments = load_data(APPOINTMENTS_FILE) or []
-    if not isinstance(doctors, list):
-        doctors = []
-    if not isinstance(appointments, list):
-        appointments = []
-
-    total_doctors = len(doctors)
-    total_appointments = len(appointments)
-    specialties = sorted(set(d.get("specialty", "") for d in doctors if isinstance(d, dict)))
-
-    return render_template("index.html",
-                           total_doctors=total_doctors,
-                           total_appointments=total_appointments,
-                           specialties=specialties)
 
 
 if __name__ == "__main__":
@@ -836,6 +730,5 @@ def admin_team():
     for username, info in ADMINS.items():
         team.append({"username": username, "name": info["name"], "role": info["role"]})
     return render_template("team.html", team=team)
-
 
 

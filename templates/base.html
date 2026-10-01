@@ -3,45 +3,141 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}SehatConnect Peshawar{% endblock %}</title>
+  <meta name="description" content="SehatConnect — Book doctor appointments online in Peshawar. Fast, easy, and trusted.">
+  <title>{% block title %}SehatConnect — Book Doctors Online in Peshawar{% endblock %}</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230d9488'/><path d='M44 22h12v22h22v12H56v22H44V56H22V44h22z' fill='white'/></svg>">
+
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% if request.endpoint == 'admin_dashboard' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+{% endif %}
 </head>
 <body>
 
-<header>
-  <div class="container nav">
-    <a href="{{ url_for('index') }}" class="logo">🏥 SehatConnect</a>
-    <nav>
-      <a href="{{ url_for('index') }}">Home</a>
-      <a href="{{ url_for('doctors') }}">Doctors</a>
-      <a href="{{ url_for('my_appointments') }}">My Appointments</a>
+<!-- ==================== HEADER ==================== -->
+{% if request.endpoint != 'admin_dashboard' %}
+<header class="header">
+  <div class="container header-inner">
+
+    <a href="{{ url_for('index') }}" class="brand">
+      <span class="brand-mark">
+        <i class="fa-solid fa-heart-pulse"></i>
+      </span>
+      <span class="brand-name">SehatConnect</span>
+    </a>
+
+    <nav class="nav">
+      <a href="{{ url_for('index') }}">
+        <i class="fa-solid fa-house"></i>
+        <span>Home</span>
+      </a>
+      <a href="{{ url_for('doctors') }}">
+        <i class="fa-solid fa-user-doctor"></i>
+        <span>Doctors</span>
+      </a>
+      <a href="{{ url_for('my_appointments') }}">
+        <i class="fa-solid fa-calendar-check"></i>
+        <span>My Appointments</span>
+      </a>
+      <a href="{{ url_for('feedback') }}">
+        <i class="fa-solid fa-comment-dots"></i>
+        <span>Feedback</span>
+      </a>
+
       {% if session.get('admin') %}
-        <a href="{{ url_for('admin_dashboard') }}">Admin</a>
-        <a href="{{ url_for('admin_logout') }}">Logout</a>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-admin">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>{{ session.get('admin_name', 'Admin') }}</span>
+        </a>
+        <a href="{{ url_for('admin_logout') }}">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span>Logout</span>
+        </a>
       {% else %}
-        <a href="{{ url_for('admin_login') }}">Admin</a>
+        <a href="{{ url_for('admin_login') }}">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Admin</span>
+        </a>
       {% endif %}
     </nav>
+
   </div>
 </header>
+{% endif %}
 
-<main class="container">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-        <div class="flash {{ category }}">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
+<!-- ==================== MAIN ==================== -->
+<main class="main {% if request.endpoint == 'admin_dashboard' %}main-dashboard{% endif %}">
+  <div class="container {% if request.endpoint == 'admin_dashboard' %}container-full{% endif %}">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">
+            <i class="fa-solid {% if category == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i>
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
 
-  {% block content %}{% endblock %}
+    {% block content %}{% endblock %}
+
+  </div>
 </main>
 
-<footer>
+<!-- ==================== FOOTER ==================== -->
+{% if request.endpoint != 'admin_dashboard' %}
+<footer class="footer">
   <div class="container">
-    <p>© 2026 SehatConnect Peshawar — Built by UET Peshawar Team</p>
+
+    <div class="footer-grid">
+
+      <div class="footer-brand">
+        <div class="brand">
+          <span class="brand-mark">
+            <i class="fa-solid fa-heart-pulse"></i>
+          </span>
+          <span class="brand-name">SehatConnect</span>
+        </div>
+        <p class="footer-tagline">
+          Connecting patients with trusted doctors in Peshawar — fast, easy, and online.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Quick Links</h4>
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('doctors') }}">Find Doctors</a>
+        <a href="{{ url_for('my_appointments') }}">My Appointments</a>
+        <a href="{{ url_for('feedback') }}">Feedback</a>
+      </div>
+
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <p><i class="fa-solid fa-location-dot"></i> UET Peshawar, Pakistan</p>
+        <p><i class="fa-solid fa-envelope"></i> sehatconnect@uetpeshawar.edu.pk</p>
+        <p><i class="fa-solid fa-clock"></i> Open 24/7 Online</p>
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <p>© 2026 SehatConnect Peshawar · Built by UET Peshawar Team</p>
+      <p class="footer-note">Making healthcare accessible, one appointment at a time.</p>
+    </div>
+
   </div>
 </footer>
+{% endif %}
 
 </body>
 </html>

@@ -1,75 +1,177 @@
 {% extends "base.html" %}
-{% block title %}Admin Dashboard{% endblock %}
+{% block title %}Dashboard — SehatConnect{% endblock %}
 
 {% block content %}
-<h1>Admin Dashboard</h1>
+<div class="dash-shell">
+  <aside class="dash-sidebar">
+    <a class="dash-brand" href="{{ url_for('admin_dashboard') }}">
+      <span class="dash-brand-mark"><i class="fa-solid fa-heart-pulse"></i></span>
+      <span class="dash-brand-copy"><strong>SehatConnect</strong><small>Care that connects</small></span>
+    </a>
 
-<section class="admin-section">
-  <h2>Add New Doctor</h2>
-  <form method="POST" action="{{ url_for('add_doctor') }}" class="form-card">
-    <label>Name * <input type="text" name="name" required></label>
-    <label>Specialty * <input type="text" name="specialty" required></label>
-    <label>Area <input type="text" name="area" placeholder="e.g. Hayatabad"></label>
-    <label>Days (comma separated) <input type="text" name="days" placeholder="Mon, Wed, Fri"></label>
-    <label>Time <input type="text" name="time" placeholder="10:00 AM - 2:00 PM"></label>
-    <label>Fee (Rs.) <input type="number" name="fee" value="500"></label>
-    <button type="submit" class="btn btn-primary">Add Doctor</button>
-  </form>
-</section>
+    <div class="dash-nav-label">WORKSPACE</div>
+    <nav class="dash-nav" aria-label="Dashboard navigation">
+      <a class="active" href="{{ url_for('admin_dashboard') }}"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+      <a href="#appointments-section"><i class="fa-regular fa-calendar-check"></i><span>Appointments</span><b>{{ pending_requests }}</b></a>
+      <a href="#patients-section"><i class="fa-solid fa-user-group"></i><span>Patients</span></a>
+      <a href="#doctors-section"><i class="fa-solid fa-user-doctor"></i><span>Doctors</span></a>
+      <a href="{{ url_for('admin_feedback_refunds') }}"><i class="fa-regular fa-message"></i><span>Feedback & refunds</span></a>
+      <a href="#services-section"><i class="fa-regular fa-folder-open"></i><span>Specialties</span></a>
+    </nav>
 
-<section class="admin-section">
-  <h2>All Doctors ({{ doctors|length }})</h2>
-  {% if doctors %}
-    <table class="table">
-      <tr><th>ID</th><th>Name</th><th>Specialty</th><th>Area</th><th>Days</th><th>Time</th><th>Fee</th><th>Action</th></tr>
-      {% for d in doctors %}
-        <tr>
-          <td>{{ d.id }}</td>
-          <td>{{ d.name }}</td>
-          <td>{{ d.specialty }}</td>
-          <td>{{ d.area }}</td>
-          <td>{{ d.days|join(', ') }}</td>
-          <td>{{ d.time }}</td>
-          <td>{{ d.fee }}</td>
-          <td>
-            <form method="POST" action="{{ url_for('remove_doctor', doctor_id=d.id) }}" style="display:inline">
-              <button class="btn btn-danger" onclick="return confirm('Remove doctor?')">Remove</button>
-            </form>
-          </td>
-        </tr>
-      {% endfor %}
-    </table>
-  {% else %}
-    <p class="empty">No doctors yet.</p>
-  {% endif %}
-</section>
+    <div class="dash-sidebar-promo">
+      <div class="promo-photo"></div>
+      <div class="promo-copy"><small>SEHATCONNECT</small><strong>Your health,<br>our priority.</strong><span>Trusted care for every patient.</span></div>
+    </div>
 
-<section class="admin-section">
-  <h2>All Appointments ({{ appointments|length }})</h2>
-  {% if appointments %}
-    <table class="table">
-      <tr><th>ID</th><th>Patient</th><th>Phone</th><th>Doctor</th><th>Date</th><th>Time</th><th>Status</th><th>Action</th></tr>
-      {% for a in appointments %}
-        <tr>
-          <td>#{{ a.id }}</td>
-          <td>{{ a.patient_name }}</td>
-          <td>{{ a.phone }}</td>
-          <td>{{ a.doctor_name }}</td>
-          <td>{{ a.date }}</td>
-          <td>{{ a.time }}</td>
-          <td><span class="status-{{ a.status|lower }}">{{ a.status }}</span></td>
-          <td>
-            {% if a.status != "Done" %}
-              <form method="POST" action="{{ url_for('mark_done', appt_id=a.id) }}" style="display:inline">
-                <button class="btn btn-success">Mark Done</button>
-              </form>
-            {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-    </table>
-  {% else %}
-    <p class="empty">No appointments yet.</p>
-  {% endif %}
-</section>
+    <div class="dash-sidebar-bottom">
+      <div class="clinic-status"><span></span><div><strong>Clinic dashboard</strong><small>Records are up to date</small></div></div>
+      <a class="dash-logout" href="{{ url_for('admin_logout') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i><span>Log out</span></a>
+    </div>
+  </aside>
+
+  <div class="dash-app">
+    <header class="dash-topbar">
+      <label class="dash-search"><i class="fa-solid fa-magnifying-glass"></i><input id="dashboardSearch" type="search" placeholder="Search patients, doctors, or appointments…" aria-label="Search dashboard"></label>
+      <div class="dash-topbar-tools">
+        <a class="dash-notifications" href="#appointments-section" aria-label="View pending appointments"><i class="fa-regular fa-bell"></i>{% if pending_requests %}<span>{{ pending_requests }}</span>{% endif %}</a>
+        <div class="dash-user">
+          <span class="dash-avatar">{{ session.get('admin_name', 'A')[:1]|upper }}</span>
+          <span class="dash-user-copy"><strong>{{ session.get('admin_name', 'Admin') }}</strong><small>{% if session.get('admin_role') == 'superadmin' %}Team lead{% else %}Clinic administrator{% endif %}</small></span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </div>
+      </div>
+    </header>
+
+    <div class="dash-dashboard">
+      <section class="dash-primary">
+        <div class="dash-welcome">
+          <div><p class="eyebrow">YOUR CLINIC AT A GLANCE</p><h1>Good day, {{ session.get('admin_name', 'Admin') }}</h1><p class="welcome-subtitle">Here’s what’s happening at your clinic today.</p></div>
+          <div class="dash-date"><i class="fa-regular fa-calendar"></i>{{ now.strftime('%a, %b %d, %Y') }}</div>
+        </div>
+
+        <section class="dash-kpis" aria-label="Clinic summary">
+          <article class="kpi-card"><div class="kpi-top"><span class="kpi-icon kpi-blue"><i class="fa-solid fa-user-group"></i></span><span class="kpi-caption">ALL TIME</span></div><p>Total Patients</p><strong>{{ total_patients }}</strong><small>Unique patient phone numbers</small></article>
+          <article class="kpi-card"><div class="kpi-top"><span class="kpi-icon kpi-teal"><i class="fa-regular fa-calendar-check"></i></span><span class="kpi-caption">TODAY</span></div><p>Today’s Appointments</p><strong>{{ today_appointments }}</strong><small>Scheduled for today</small></article>
+          <article class="kpi-card"><div class="kpi-top"><span class="kpi-icon kpi-violet"><i class="fa-regular fa-clipboard"></i></span><span class="kpi-caption">NEEDS REVIEW</span></div><p>Pending Requests</p><strong>{{ pending_requests }}</strong><small>Waiting for a decision</small></article>
+          <article class="kpi-card"><div class="kpi-top"><span class="kpi-icon kpi-cyan"><i class="fa-solid fa-heart"></i></span><span class="kpi-caption">ON THE TEAM</span></div><p>Available Doctors</p><strong>{{ total_doctors }}</strong><small>Listed in SehatConnect</small></article>
+        </section>
+
+        <section class="dash-insights">
+          <article class="dash-panel visits-panel">
+            <div class="panel-heading"><div><h2>Appointment activity</h2><p>Appointments by day over the last week</p></div><span class="period-chip"><i class="fa-regular fa-calendar"></i> Last 7 days</span></div>
+            <div class="chart-box"><canvas id="appointmentsChart" aria-label="Appointment activity chart"></canvas></div>
+          </article>
+          <article class="dash-panel specialties-panel" id="services-section">
+            <div class="panel-heading"><div><h2>Doctor specialties</h2><p>Current team breakdown</p></div></div>
+            <div class="specialty-chart-wrap"><canvas id="specialtyChart" aria-label="Doctor specialties chart"></canvas><div class="specialty-chart-total"><strong>{{ total_doctors }}</strong><span>Doctors</span></div></div>
+            <div class="specialty-legend">
+              {% for label in specialty_labels %}<div class="legend-item"><i style="--legend-color: {{ ['#2684ff','#25b7a4','#7c6ee6','#ffbd59','#45b6c7','#ec7292'][loop.index0 % 6] }}"></i><span>{{ label }}</span><strong>{{ specialty_data[loop.index0] }}</strong></div>{% endfor %}
+            </div>
+          </article>
+        </section>
+
+        <section class="dash-activity-grid">
+          <article class="dash-panel recent-panel" id="appointments-section">
+            <div class="panel-heading"><div><h2>Recent appointments</h2><p>Latest bookings in your clinic</p></div><a class="panel-link" href="#appointments-section">View all <i class="fa-solid fa-arrow-right"></i></a></div>
+            {% if recent_appointments %}
+            <div class="table-scroll"><table class="dash-table"><thead><tr><th>Patient</th><th>Doctor</th><th>Date & time</th><th>Status</th></tr></thead><tbody>
+              {% for a in recent_appointments %}<tr data-search-row>
+                <td><div class="person-cell"><span class="person-avatar avatar-{{ loop.index0 % 5 }}">{{ a.patient_name[:1]|upper }}</span><span><strong>{{ a.patient_name }}</strong><small>{{ a.phone }}</small></span></div></td>
+                <td><span class="doctor-cell-name">{{ a.doctor_name }}</span><small class="table-subtext">{{ a.specialty }}</small></td>
+                <td><strong class="date-cell">{{ a.date }}</strong><small class="table-subtext">{{ a.time }}</small></td>
+                <td><span class="status-pill {% if a.status in ['Confirmed','Auto-Confirmed','Done','Paid'] %}status-good{% elif a.status in ['Rejected','Cancelled'] %}status-bad{% else %}status-pending{% endif %}">{{ a.status }}</span></td>
+              </tr>{% endfor %}
+            </tbody></table></div>
+            {% else %}<div class="empty-state"><i class="fa-regular fa-calendar"></i><strong>No appointments yet</strong><span>New bookings will appear here.</span></div>{% endif %}
+          </article>
+
+          <article class="dash-panel services-panel">
+            <div class="panel-heading"><div><h2>Healthcare services</h2><p>Specialties available at your clinic</p></div><a class="panel-link" href="#doctors-section">Doctors <i class="fa-solid fa-arrow-right"></i></a></div>
+            <div class="service-list">
+              {% for label in specialty_labels %}<div class="service-item"><span class="service-icon service-{{ loop.index0 % 5 }}"><i class="fa-solid {% if loop.index0 % 5 == 0 %}fa-stethoscope{% elif loop.index0 % 5 == 1 %}fa-heart-pulse{% elif loop.index0 % 5 == 2 %}fa-hand-holding-medical{% elif loop.index0 % 5 == 3 %}fa-brain{% else %}fa-user-doctor{% endif %}"></i></span><span class="service-copy"><strong>{{ label }}</strong><small>{{ specialty_data[loop.index0] }} doctor{% if specialty_data[loop.index0] != 1 %}s{% endif %}</small></span><i class="fa-solid fa-chevron-right service-arrow"></i></div>{% endfor %}
+            </div>
+          </article>
+        </section>
+
+        <section class="dash-panel doctor-management" id="doctors-section">
+          <div class="panel-heading"><div><h2>Doctors</h2><p>Manage clinic profiles and notification contacts</p></div><a class="primary-small" href="#add-doctor-form"><i class="fa-solid fa-plus"></i> Add doctor</a></div>
+          {% if doctors %}<div class="table-scroll"><table class="dash-table doctor-table"><thead><tr><th>Doctor</th><th>Specialty & area</th><th>Schedule</th><th>Fee</th><th>Email & contact</th></tr></thead><tbody>
+            {% for d in doctors %}<tr data-search-row>
+              <td><div class="person-cell"><span class="person-avatar doctor-avatar">{{ d.name[:1]|upper }}</span><span><strong>{{ d.name }}</strong><small>#{{ d.id }}</small></span></div></td>
+              <td><strong class="doctor-cell-name">{{ d.specialty }}</strong><small class="table-subtext">{{ d.area or 'Area not set' }}</small></td>
+              <td><strong class="date-cell">{{ d.days|join(', ') }}</strong><small class="table-subtext">{{ d.time }}</small></td>
+              <td><strong>Rs. {{ d.fee }}</strong></td>
+              <td><div class="doctor-contact-cell"><form method="POST" action="{{ url_for('update_doctor_contact', doctor_id=d.id) }}" class="contact-form"><input type="email" name="email" value="{{ d.email|default('', true) }}" placeholder="Doctor email" aria-label="Email for {{ d.name }}" required><input type="text" name="phone" value="{{ d.phone|default('', true) }}" placeholder="Phone / WhatsApp" aria-label="Phone for {{ d.name }}"><button type="submit" class="save-contact">Save contact</button></form><form method="POST" action="{{ url_for('remove_doctor', doctor_id=d.id) }}" onsubmit="return confirm('Remove this doctor?')"><button type="submit" class="remove-doctor" aria-label="Remove {{ d.name }}"><i class="fa-regular fa-trash-can"></i></button></form></div></td>
+            </tr>{% endfor %}
+          </tbody></table></div>{% else %}<div class="empty-state"><i class="fa-solid fa-user-doctor"></i><strong>No doctors added</strong><span>Add a doctor to start taking appointments.</span></div>{% endif %}
+        </section>
+
+        <section class="dash-panel add-doctor-panel" id="add-doctor-form">
+          <div class="panel-heading"><div><h2>Add a doctor</h2><p>Add a clinic profile with a working email address for booking notifications.</p></div></div>
+          <form method="POST" action="{{ url_for('add_doctor') }}" class="add-doctor-form">
+            <label><span>Doctor name *</span><input type="text" name="name" required></label>
+            <label><span>Specialty *</span><input type="text" name="specialty" required></label>
+            <label><span>Area</span><input type="text" name="area" placeholder="e.g. Hayatabad"></label>
+            <label><span>Available days</span><input type="text" name="days" placeholder="Mon, Wed, Fri"></label>
+            <label><span>Clinic hours</span><input type="text" name="time" placeholder="10:00 AM – 2:00 PM"></label>
+            <label><span>Fee (Rs.)</span><input type="number" name="fee" value="500" min="0"></label>
+            <label><span>Email *</span><input type="email" name="email" placeholder="doctor@example.com" required></label>
+            <label><span>Phone / WhatsApp</span><input type="text" name="phone" placeholder="03XXXXXXXXX"></label>
+            <button class="primary-small" type="submit"><i class="fa-solid fa-plus"></i> Add doctor</button>
+          </form>
+        </section>
+      </section>
+
+      <aside class="dash-rail">
+        <article class="hero-card"><div class="hero-card-content"><span>SEHATCONNECT CARE</span><h2>Better care<br>for a healthier you.</h2><p>Find trusted doctors and manage appointments in one place.</p><a href="{{ url_for('doctors') }}">View doctors <i class="fa-solid fa-arrow-right"></i></a></div></article>
+
+        <article class="dash-panel quick-panel"><div class="panel-heading"><div><h2>Quick actions</h2></div></div><div class="quick-grid">
+          <a href="{{ url_for('doctors') }}"><i class="fa-regular fa-calendar-plus quick-blue"></i><span>Book appointment</span></a>
+          <a href="#add-doctor-form"><i class="fa-solid fa-user-plus quick-violet"></i><span>Add doctor</span></a>
+          <a href="#appointments-section"><i class="fa-regular fa-folder-open quick-cyan"></i><span>View appointments</span></a>
+          <a href="{{ url_for('admin_feedback_refunds') }}"><i class="fa-regular fa-paper-plane quick-teal"></i><span>Feedback & refunds</span></a>
+        </div></article>
+
+        <article class="dash-panel upcoming-panel"><div class="panel-heading"><div><h2>Upcoming appointments</h2><p>Next scheduled visits</p></div><a class="panel-link" href="#appointments-section">All <i class="fa-solid fa-arrow-right"></i></a></div>
+          {% if upcoming %}<div class="upcoming-list">{% for u in upcoming %}<div class="upcoming-item"><span class="person-avatar avatar-{{ loop.index0 % 5 }}">{{ u.patient_name[:1]|upper }}</span><div class="upcoming-info"><strong>{{ u.patient_name }}</strong><small>{{ u.doctor_name }}</small><small>{{ u.date }}</small></div><div class="upcoming-time"><strong>{{ u.time }}</strong><span class="status-pill {% if u.status in ['Confirmed','Auto-Confirmed','Done','Paid'] %}status-good{% elif u.status in ['Rejected','Cancelled'] %}status-bad{% else %}status-pending{% endif %}">{{ u.status }}</span></div></div>{% endfor %}</div>{% else %}<div class="empty-state compact"><i class="fa-regular fa-calendar"></i><strong>No upcoming appointments</strong></div>{% endif %}
+        </article>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  const dashboardChartColors = ['#2684ff', '#25b7a4', '#7c6ee6', '#ffbd59', '#45b6c7', '#ec7292'];
+  const appointmentCanvas = document.getElementById('appointmentsChart');
+  if (appointmentCanvas && window.Chart) {
+    new Chart(appointmentCanvas, {
+      type: 'line',
+      data: { labels: {{ chart_labels|tojson }}, datasets: [{
+        label: 'Appointments', data: {{ chart_data|tojson }},
+        borderColor: '#2485f4', backgroundColor: 'rgba(36,133,244,.13)',
+        borderWidth: 3, fill: true, tension: .38, pointRadius: 3,
+        pointHoverRadius: 5, pointBackgroundColor: '#2485f4', pointBorderColor: '#fff', pointBorderWidth: 2
+      }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { displayColors: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0, color: '#7b8da7' }, grid: { color: '#edf2f7', drawBorder: false } }, x: { ticks: { color: '#7b8da7' }, grid: { display: false } } }
+      }
+    });
+  }
+  const specialtyCanvas = document.getElementById('specialtyChart');
+  if (specialtyCanvas && window.Chart) {
+    new Chart(specialtyCanvas, {
+      type: 'doughnut',
+      data: { labels: {{ specialty_labels|tojson }}, datasets: [{ data: {{ specialty_data|tojson }}, backgroundColor: dashboardChartColors, borderWidth: 0, hoverOffset: 4 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } } }
+    });
+  }
+  const dashboardSearch = document.getElementById('dashboardSearch');
+  if (dashboardSearch) dashboardSearch.addEventListener('input', () => {
+    const query = dashboardSearch.value.trim().toLowerCase();
+    document.querySelectorAll('[data-search-row]').forEach(row => { row.hidden = !row.textContent.toLowerCase().includes(query); });
+  });
+</script>
 {% endblock %}
