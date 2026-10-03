@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Cash on Visit - SehatConnect{% endblock %}
+{% block content %}
+<div class="payment-option-page cash-page">
+  <a class="back-payment" href="{{ url_for('payment_info') }}">← Back to Payment</a>
+  <div class="option-hero"><div><span class="paydash-kicker">CASH ON VISIT</span><h1>Pay at the clinic</h1><p>Book your appointment without entering online payment details. Your appointment will remain marked as Payment Pending / Cash on Visit until you pay at the clinic.</p></div><div class="big-option-icon">💵</div></div>
+  <div class="cash-steps"><div><strong>1</strong><span>Choose your doctor</span></div><div><strong>2</strong><span>Select your appointment time</span></div><div><strong>3</strong><span>Confirm Cash on Visit</span></div></div>
+  <div class="action-panel"><div><h2>Book with cash payment</h2><p>No card or wallet details are required.</p></div><a class="primary-action" href="{{ url_for('doctors') }}">Choose Doctor for Cash Visit →</a></div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Online Payments - SehatConnect{% endblock %}
+{% block content %}
+<div class="payment-option-page online-page">
+  <a class="back-payment" href="{{ url_for('payment_info') }}">← Back to Payment</a>
+  <div class="option-hero"><div><span class="paydash-kicker">ONLINE PAYMENT</span><h1>Pay securely online</h1><p>Choose Card, JazzCash or Easypaisa. After you choose a doctor and book an appointment, SehatConnect opens the real payment form for that appointment.</p></div><div class="big-option-icon">💳</div></div>
+  <div class="method-grid">
+    <div class="method-card"><b>💳 Card</b><span>Visa / Mastercard style demo checkout</span></div>
+    <div class="method-card"><b>🟠 JazzCash</b><span>Mobile wallet payment</span></div>
+    <div class="method-card"><b>🟢 Easypaisa</b><span>Mobile wallet payment</span></div>
+  </div>
+  <div class="action-panel"><div><h2>Ready to make an online payment?</h2><p>Choose your doctor first. Your consultation fee and appointment details will automatically appear on the payment form.</p></div><a class="primary-action" href="{{ url_for('doctors') }}">Choose Doctor & Continue →</a></div>
+</div>
+{% endblock %}

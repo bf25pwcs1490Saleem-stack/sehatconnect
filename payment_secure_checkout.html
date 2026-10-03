@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Secure Checkout - SehatConnect{% endblock %}
+{% block content %}
+<div class="payment-option-page secure-page">
+  <a class="back-payment" href="{{ url_for('payment_info') }}">← Back to Payment</a>
+  <div class="option-hero"><div><span class="paydash-kicker">SECURE CHECKOUT</span><h1>Your payment is protected</h1><p>Review your appointment, consultation fee and payment method on a clean checkout screen before confirming.</p></div><div class="big-option-icon">🛡️</div></div>
+  <div class="secure-points"><div><b>✓ Appointment summary</b><span>Doctor, specialty, date and time.</span></div><div><b>✓ Clear total</b><span>Consultation fee is shown before payment.</span></div><div><b>✓ Demo-safe checkout</b><span>Sensitive payment information is not stored.</span></div></div>
+  <div class="action-panel"><div><h2>Start secure checkout</h2><p>Book an appointment to generate your personalized checkout page.</p></div><a class="primary-action" href="{{ url_for('doctors') }}">Start Secure Checkout →</a></div>
+</div>
+{% endblock %}

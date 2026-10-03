@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Payment - SehatConnect{% endblock %}
+{% block content %}
+<div class="payment-page">
+  <h1>Payment</h1>
+  <div class="payment-summary">
+    <h2>Appointment #{{ appointment.id }}</h2>
+    <p><strong>Doctor:</strong> {{ appointment.doctor_name }}</p>
+    <p><strong>Date:</strong> {{ appointment.date }}</p>
+    <p><strong>Time:</strong> {{ appointment.time }}</p>
+    <p><strong>Consultation Fee:</strong> Rs. {{ appointment.fee|default(0) }}</p>
+  </div>
+
+  <form method="POST" class="payment-form">
+    <h2>Choose Payment Method</h2>
+
+    <label class="payment-choice">
+      <input type="radio" name="payment_method" value="online" required onchange="choose('online')">
+      <span><strong>💳 Online Payment</strong><small>Card, JazzCash, or Easypaisa</small></span>
+    </label>
+
+    <div id="online-box" class="payment-box" style="display:none">
+      <label>Payment Method</label>
+      <select name="online_method" id="online_method" onchange="fields()">
+        <option value="">Select method</option>
+        <option value="Card">Card</option>
+        <option value="JazzCash">JazzCash</option>
+        <option value="Easypaisa">Easypaisa</option>
+      </select>
+
+      <div id="card-box" style="display:none">
+        <label>Card Number</label>
+        <input name="card_number" placeholder="XXXX XXXX XXXX XXXX" maxlength="19">
+        <div class="two-col">
+          <div><label>Expiry</label><input name="expiry" placeholder="MM/YY" maxlength="5"></div>
+          <div><label>CVV</label><input name="cvv" type="password" placeholder="CVV" maxlength="4"></div>
+        </div>
+      </div>
+
+      <div id="wallet-box" style="display:none">
+        <label>Mobile Number</label>
+        <input name="mobile" type="tel" placeholder="03XXXXXXXXX">
+      </div>
+
+      <p class="demo-note">Demo payment only. No real money is charged and sensitive payment details are not stored.</p>
+      <button type="submit" class="pay-btn">💳 Pay Now</button>
+    </div>
+
+    <label class="payment-choice">
+      <input type="radio" name="payment_method" value="cash" onchange="choose('cash')">
+      <span><strong>💵 Cash Payment</strong><small>Pay at the clinic/hospital during your visit</small></span>
+    </label>
+
+    <div id="cash-box" class="payment-box" style="display:none">
+      <h3>Cash Payment</h3>
+      <p>No online payment details are required.</p>
+      <p><strong>Status:</strong> Payment Pending / Cash on Visit</p>
+      <button type="submit" class="pay-btn">Confirm Cash Payment</button>
+    </div>
+  </form>
+</div>
+
+<script>
+function choose(type){
+  document.getElementById('online-box').style.display=type==='online'?'block':'none';
+  document.getElementById('cash-box').style.display=type==='cash'?'block':'none';
+  document.getElementById('online_method').required=type==='online';
+  if(type==='cash') document.getElementById('online_method').value='';
+}
+function fields(){
+  const m=document.getElementById('online_method').value;
+  document.getElementById('card-box').style.display=m==='Card'?'block':'none';
+  document.getElementById('wallet-box').style.display=(m==='JazzCash'||m==='Easypaisa')?'block':'none';
+}
+</script>
+{% endblock %}

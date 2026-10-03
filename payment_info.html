@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Payment Dashboard - SehatConnect{% endblock %}
+{% block content %}
+<section class="paydash-hero">
+  <div class="paydash-copy">
+    <span class="paydash-kicker">SECURE HEALTHCARE PAYMENTS</span>
+    <h1>Choose how you want to pay</h1>
+    <p>Use one of the three options below. Each option opens its own payment page and guides you through the next step.</p>
+    <div class="paydash-highlights">
+      <span>✓ Trusted Doctors</span><span>✓ Secure Payments</span><span>✓ Easy Booking</span><span>✓ 24/7 Support</span>
+    </div>
+  </div>
+  <div class="paydash-hero-art" aria-hidden="true">
+    <div class="medical-cross">+</div><div class="doctor-circle">🩺</div><div class="heart-badge">♥</div>
+  </div>
+</section>
+
+<section class="payment-choice-grid" aria-label="Payment options">
+  <a class="payment-choice-card online-card" href="{{ url_for('payment_online') }}">
+    <div class="choice-icon">💳</div>
+    <div class="choice-body"><h2>Online Payments</h2><p>Pay securely with Card, JazzCash or Easypaisa.</p><span class="choice-action">Open Online Payment →</span></div>
+  </a>
+
+  <a class="payment-choice-card secure-card" href="{{ url_for('payment_secure_checkout') }}">
+    <div class="choice-icon">🛡️</div>
+    <div class="choice-body"><h2>Secure Checkout</h2><p>Review the secure checkout process before completing your appointment payment.</p><span class="choice-action">Open Secure Checkout →</span></div>
+  </a>
+
+  <a class="payment-choice-card cash-card" href="{{ url_for('payment_cash') }}">
+    <div class="choice-icon">💵</div>
+    <div class="choice-body"><h2>Cash on Visit</h2><p>Confirm your appointment now and pay at the clinic during your visit.</p><span class="choice-action">Open Cash Payment →</span></div>
+  </a>
+</section>
+
+<section class="payment-help-strip">
+  <div><strong>Already booked?</strong><span>Go to My Appointments and select Complete Payment for your appointment.</span></div>
+  <a href="{{ url_for('my_appointments') }}">My Appointments →</a>
+</section>
+{% endblock %}
