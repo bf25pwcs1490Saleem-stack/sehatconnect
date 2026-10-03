@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Doctors — SehatConnect{% endblock %}
+
+{% block content %}
+<h1>Our Doctors</h1>
+
+<form method="GET" action="{{ url_for('doctors') }}" class="search-form">
+  <input type="text" name="q" placeholder="Search by name, specialty, or area..." value="{{ q }}">
+  <select name="specialty">
+    <option value="">All Specialties</option>
+    {% for s in specialties %}
+      <option value="{{ s }}" {% if s == selected_specialty %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <select name="area">
+    <option value="">All Areas</option>
+    {% for a in areas %}
+      <option value="{{ a }}" {% if a == selected_area %}selected{% endif %}>{{ a }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-primary">Search</button>
+</form>
+
+{% if doctors %}
+  <div class="doctor-grid">
+    {% for d in doctors %}
+      <div class="doctor-card capacity-doctor-card">
+        <div class="doctor-card-top">
+          <div>
+            <h3>{{ d.name }}</h3>
+            <p class="specialty">{{ d.specialty }}</p>
+          </div>
+          {% if d.full %}
+            <span class="capacity-badge full">Full</span>
+          {% else %}
+            <span class="capacity-badge available">Available</span>
+          {% endif %}
+        </div>
+        {% if d.area %}<p class="area">📍 {{ d.area }}</p>{% endif %}
+        <p class="days">🗓️ {{ d.days|join(', ') }}</p>
+        <p class="time">⏰ {{ d.time }}</p>
+        <p class="fee">Fee: Rs. {{ d.fee }}</p>
+
+        <div class="mini-capacity">
+          <div class="mini-capacity-head">
+            <span>Appointments booked</span>
+            <strong>{{ d.booked }}/{{ d.limit }}</strong>
+          </div>
+          <div class="capacity-bar"><span style="width: {{ (d.booked / d.limit * 100)|round(0) }}%"></span></div>
+          {% if d.full %}
+            <p class="full-text">Full • {{ d.booked }}/{{ d.limit }}</p>
+          {% else %}
+            <p class="remaining-text">Available • {{ d.remaining }} slots left</p>
+          {% endif %}
+        </div>
+
+        {% if d.full %}
+          <button class="btn btn-disabled" disabled>Full • {{ d.booked }}/{{ d.limit }}</button>
+        {% else %}
+          <a href="{{ url_for('book', doctor_id=d.id) }}" class="btn btn-primary doctor-book-btn">Book Appointment</a>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="empty">No doctors found. Try a different search.</p>
+{% endif %}
+{% endblock %}
