@@ -1,0 +1,47 @@
+[
+  {
+    "doctor_id": 1,
+    "doctor_name": "Dr Salman Hasan",
+    "booked": 1,
+    "limit": 20,
+    "remaining": 19,
+    "full": false,
+    "updated_at": "2026-10-03T16:32:12"
+  },
+  {
+    "doctor_id": 2,
+    "doctor_name": "Hashim Khan",
+    "booked": 4,
+    "limit": 20,
+    "remaining": 16,
+    "full": false,
+    "updated_at": "2026-10-03T16:32:12"
+  },
+  {
+    "doctor_id": 3,
+    "doctor_name": "Dr Ubid Ullah",
+    "booked": 1,
+    "limit": 20,
+    "remaining": 19,
+    "full": false,
+    "updated_at": "2026-10-03T16:32:12"
+  },
+  {
+    "doctor_id": 5,
+    "doctor_name": "Muhammad Saleem",
+    "booked": 0,
+    "limit": 20,
+    "remaining": 20,
+    "full": false,
+    "updated_at": "2026-10-03T16:32:12"
+  },
+  {
+    "doctor_id": 6,
+    "doctor_name": "Dr. MUHAMMAD HASNAIN",
+    "booked": 0,
+    "limit": 20,
+    "remaining": 20,
+    "full": false,
+    "updated_at": "2026-10-03T16:32:12"
+  }
+]

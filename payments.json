@@ -1,0 +1,13 @@
+[
+  {
+    "id": 1,
+    "appointment_id": 6,
+    "doctor_id": 2,
+    "patient_name": "mu",
+    "payment_method": "JazzCash",
+    "payment_status": "Paid",
+    "amount": 500,
+    "created_at": "2026-10-03T16:32:12",
+    "updated_at": "2026-10-03T16:32:12"
+  }
+]
