@@ -1,0 +1,60 @@
+[
+  {
+    "id": 1,
+    "name": "Dr Salman Hasan",
+    "specialty": "Nephrology",
+    "area": "sawa",
+    "days": [
+      "mon"
+    ],
+    "time": "1:00 to 3:00",
+    "fee": 500
+  },
+  {
+    "id": 2,
+    "name": "Hashim Khan",
+    "specialty": "Dermatology",
+    "area": "Peshawar",
+    "days": [
+      "Monday",
+      "Tuesday"
+    ],
+    "time": "1:00 to 3:00",
+    "fee": 500
+  },
+  {
+    "id": 3,
+    "name": "Dr Ubid Ullah",
+    "specialty": "Nephrology",
+    "area": "swabi",
+    "days": [
+      "mon"
+    ],
+    "time": "11:00 to 5:00",
+    "fee": 500
+  },
+  {
+    "id": 5,
+    "name": "Muhammad Saleem",
+    "specialty": "Orthopedics",
+    "area": "swabi",
+    "days": [
+      "Mon to Fri"
+    ],
+    "time": "11:00 to 5:00",
+    "fee": 500
+  },
+  {
+    "id": 6,
+    "name": "Dr. MUHAMMAD HASNAIN",
+    "specialty": "Orthopedics",
+    "area": "Shabqadar, CHARSADDA",
+    "days": [
+      "Mon",
+      "Tue",
+      "Wed"
+    ],
+    "time": "4PM To 8PM",
+    "fee": 5000
+  }
+]
