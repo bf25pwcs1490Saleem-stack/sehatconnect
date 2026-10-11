@@ -33,7 +33,7 @@
           <td>
             <form method="POST" action="{{ url_for('refund_appointment', appt_id=a.id) }}" style="display:inline">
               <button type="submit" class="btn btn-warning"
-                      onclick="return confirm('Refund Rs. {{ a.get(\'fee\', 0) }} to {{ a.patient_name }}?')">
+                         onclick="return confirm('Refund Rs. {{ a.fee|default(0) }} to {{ a.patient_name }}?')">
                 💰 Refund
               </button>
             </form>
