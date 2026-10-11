@@ -4,64 +4,15 @@ import os
 import shutil
 import tempfile
 import threading
-import smtplib
-from email.message import EmailMessage
 from datetime import datetime, timedelta
 import time
 app = Flask(__name__)
 app.secret_key = "sehatconnect_secret_key_2026"
+app.config["MAX_CONTENT_LENGTH"] = 3 * 1024 * 1024  # 3 MB upload limit (doctor photos)
 
 DOCTORS_FILE = "doctors.json"
 APPOINTMENTS_FILE = "appointments.json"
 ADMIN_PASSWORD = "admin123"
-
-try:
-    from email_config import EMAIL_SENDER, EMAIL_PASSWORD, SMTP_SERVER, SMTP_PORT, NOTIFY_ON_BOOKING
-except (ImportError, AttributeError):
-    EMAIL_SENDER = EMAIL_PASSWORD = ""
-    SMTP_SERVER, SMTP_PORT, NOTIFY_ON_BOOKING = "smtp.gmail.com", 587, True
-
-
-def send_booking_notification(appointment):
-    """Email the doctor about a new booking when SMTP and their address are configured."""
-    recipient = (appointment.get("doctor_email") or "").strip()
-    if not NOTIFY_ON_BOOKING or not recipient:
-        return False, "This doctor has no email address. Sign in to Admin, enter it in the doctor list, and save the contact."
-    if not EMAIL_SENDER or not EMAIL_PASSWORD or "your-email@gmail.com" in EMAIL_SENDER:
-        return False, "Email sender not configured: set EMAIL_SENDER and the Gmail App Password in email_config.py. The doctor email is only the recipient."
-
-    smtp_password = "".join(EMAIL_PASSWORD.split())
-    if len(smtp_password) != 16:
-        return False, "Gmail App Password must be 16 characters. A regular Gmail password will not work."
-    message = EmailMessage()
-    message["Subject"] = f"New appointment request #{appointment['id']}"
-    message["From"] = EMAIL_SENDER
-    message["To"] = recipient
-    message.set_content(
-        f"A new appointment request was received.\n\n"
-        f"Patient: {appointment['patient_name']}\n"
-        f"Phone: {appointment['phone']}\n"
-        f"Date: {appointment['date']}\n"
-        f"Time: {appointment['time']}\n"
-        f"Note: {appointment.get('note') or 'None'}\n"
-        f"Appointment ID: #{appointment['id']}\n"
-    )
-    try:
-        with smtplib.SMTP(SMTP_SERVER, int(SMTP_PORT), timeout=10) as smtp:
-            smtp.starttls()
-            smtp.login(EMAIL_SENDER, smtp_password)
-            smtp.send_message(message)
-        return True, ""
-    except smtplib.SMTPAuthenticationError as exc:
-        print(f"[APPOINTMENT EMAIL AUTH ERROR] {exc}")
-        return False, "Gmail rejected the sender login. Check EMAIL_SENDER and enter the 16-character Google App Password, not your normal Gmail password."
-    except smtplib.SMTPRecipientsRefused as exc:
-        print(f"[APPOINTMENT EMAIL RECIPIENT ERROR] {exc}")
-        return False, "Gmail rejected the doctor email address. Check the address saved for this doctor."
-    except (smtplib.SMTPException, OSError) as exc:
-        print(f"[APPOINTMENT EMAIL ERROR] {exc}")
-        return False, "Could not connect to Gmail. Check your internet connection and SMTP settings."
-
 
 # ==================== ADMIN ACCOUNTS ====================
 ADMINS = {
@@ -88,6 +39,7 @@ ADMINS = {
 }
 
 ADMIN_PASSWORD = "admin123"
+
 
 # ---------------- HELPERS ----------------
 def load_data(file):
@@ -172,7 +124,6 @@ def save_data(file, data):
 
             # Atomic replace
             os.replace(tmp_path, file)
-            return True
 
         except Exception as e:
             print(f"[SAVE ERROR] {file}: {e}")
@@ -190,43 +141,15 @@ def save_data(file, data):
                 pass
 
 
-            return False
 def next_id(data):
     if not data:
         return 1
     return max(item["id"] for item in data) + 1
-def check_auto_confirm(appointments):
-    """Auto-confirm appointments waiting over 2 minutes."""
-    if not isinstance(appointments, list):
-        return []
 
-    changed = False
-    now = datetime.now()
 
-    for a in appointments:
-        if not isinstance(a, dict):
-            continue
-        if a.get("status") == "Requested":
-            try:
-                req_time_str = a.get("requested_at", "")
-                if req_time_str:
-                    req_time = datetime.fromisoformat(req_time_str)
-                else:
-                    req_time = now
-            except Exception:
-                req_time = now
-
-            if (now - req_time).total_seconds() >= 120:
-                a["status"] = "Auto-Confirmed"
-                changed = True
-
-    if changed:
-        try:
-            save_data(APPOINTMENTS_FILE, appointments)
-        except Exception as e:
-            print(f"[AUTO-CONFIRM SAVE ERROR] {e}")
-
-    return appointments
+# ---------------- PUBLIC ROUTES ----------------
+@app.route("/")
+def index():
     doctors = load_data(DOCTORS_FILE)
     total_doctors = len(doctors)
     total_appointments = len(load_data(APPOINTMENTS_FILE))
@@ -287,13 +210,11 @@ def book(doctor_id):
             return render_template("book.html", doctor=doctor)
 
         appointments = load_data(APPOINTMENTS_FILE)
-        if not isinstance(appointments, list):
-            appointments = []
 
         for a in appointments:
-            if (isinstance(a, dict) and a.get("doctor_id") == doctor_id
-                    and a.get("date") == date
-                    and str(a.get("time", "")).lower() == time.lower()):
+            if (a["doctor_id"] == doctor_id
+                    and a["date"] == date
+                    and a["time"].lower() == time.lower()):
                 flash("This slot is already booked. Please choose another time.", "error")
                 return render_template("book.html", doctor=doctor)
 
@@ -303,31 +224,15 @@ def book(doctor_id):
             "phone": phone,
             "doctor_id": doctor_id,
             "doctor_name": doctor["name"],
-            "doctor_email": doctor.get("email", ""),
-            "doctor_phone": doctor.get("phone", ""),
             "specialty": doctor["specialty"],
             "date": date,
             "time": time,
             "note": note,
-            "fee": doctor.get("fee", 0),
-            "status": "Requested",
-            "payment_status": "Unpaid",
-            "payment_method": "",
-            "payment_ref": "",
-            "paid_at": "",
-            "requested_at": datetime.now().isoformat()
+            "status": "Pending"
         }
         appointments.append(new_appt)
-        if not save_data(APPOINTMENTS_FILE, appointments):
-            flash("Could not save the appointment. Please try again.", "error")
-            return render_template("book.html", doctor=doctor)
-        sent, notification_error = send_booking_notification(new_appt)
-        if notification_error:
-            flash(f"Appointment booked! Your ID is #{new_appt['id']}. {notification_error}", "error")
-        elif sent:
-            flash(f"Appointment booked! Your ID is #{new_appt['id']}. The doctor was emailed.", "success")
-        else:
-            flash(f"Appointment booked! Your ID is #{new_appt['id']}.", "success")
+        save_data(APPOINTMENTS_FILE, appointments)
+        flash(f"Appointment booked! Your ID is #{new_appt['id']}", "success")
         return redirect(url_for("my_appointments", phone=phone))
 
     return render_template("book.html", doctor=doctor)
@@ -394,80 +299,140 @@ def admin_logout():
 def admin_dashboard():
     if not session.get("admin"):
         return redirect(url_for("admin_login"))
-
     doctors = load_data(DOCTORS_FILE)
     appointments = load_data(APPOINTMENTS_FILE)
-    appointments = check_auto_confirm(appointments)
-
-    # ============ DASHBOARD STATS ============
-    from datetime import datetime as dt
-
-    today_str = dt.now().strftime("%Y-%m-%d")
-
-    total_doctors = len(doctors)
-    total_appointments = len(appointments)
-    total_patients = len({str(a.get("phone", "")).strip() for a in appointments if isinstance(a, dict) and a.get("phone")})
-    pending_requests = sum(1 for a in appointments if isinstance(a, dict) and a.get("status") == "Requested")
-    today_appointments = len([a for a in appointments if a.get("date") == today_str])
-    pending_payments = len([a for a in appointments
-                            if a.get("payment_status") in ("Unpaid", "Pending Verification")])
-
-    # ============ LINE CHART — Last 7 Days ============
-    chart_labels = []
-    chart_data = []
-    for i in range(6, -1, -1):
-        day = dt.now() - timedelta(days=i)
-        day_str = day.strftime("%Y-%m-%d")
-        label = day.strftime("%a")
-        count = len([a for a in appointments if a.get("date") == day_str])
-        chart_labels.append(label)
-        chart_data.append(count)
-
-    # ============ DOUGHNUT — Specialties ============
-    specialty_counts = {}
-    for d in doctors:
-        spec = d.get("specialty", "Other")
-        specialty_counts[spec] = specialty_counts.get(spec, 0) + 1
-
-    # If no doctors, show placeholder
-    if not specialty_counts:
-        specialty_counts = {"No Data": 1}
-
-    specialty_labels = list(specialty_counts.keys())
-    specialty_data = list(specialty_counts.values())
-
-    # ============ RECENT APPOINTMENTS ============
-    recent_appointments = sorted(
-        appointments,
-        key=lambda x: x.get("id", 0),
-        reverse=True
-    )[:8]
-
-    # ============ UPCOMING ============
-    upcoming = [
-        a for a in appointments
-        if a.get("date", "") >= today_str
-        and a.get("status") not in ("Rejected", "Refunded", "Cancelled - Refund Pending")
-    ]
-    upcoming = sorted(upcoming, key=lambda x: (x.get("date", ""), x.get("time", "")))[:5]
-
     return render_template("admin.html",
                            doctors=doctors,
-                           appointments=appointments,
-                           total_doctors=total_doctors,
-                           total_appointments=total_appointments,
-                           total_patients=total_patients,
-                           pending_requests=pending_requests,
-                           today_appointments=today_appointments,
-                           pending_payments=pending_payments,
-                           pending_count=pending_payments,
-                           chart_labels=chart_labels,
-                           chart_data=chart_data,
-                           specialty_labels=specialty_labels,
-                           specialty_data=specialty_data,
-                           recent_appointments=recent_appointments,
-                           upcoming=upcoming,
-                           now=dt.now())
+                           appointments=appointments)
+
+
+# ---------------- DOCTOR PHOTO UPLOAD ----------------
+PHOTO_DIR = os.path.join(app.static_folder, "doctors")
+
+
+def _detect_image_ext(data):
+    """Return 'jpg' / 'png' / 'webp' from the file CONTENT (never trust the filename), else None."""
+    if data[:3] == b"\xff\xd8\xff":
+        return "jpg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
+def delete_doctor_photo(doctor):
+    """Delete the doctor's uploaded photo file (if any)."""
+    old = doctor.get("photo")
+    if old:
+        try:
+            os.remove(os.path.join(PHOTO_DIR, os.path.basename(old)))
+        except OSError:
+            pass
+
+
+def save_doctor_photo(doctor, file_storage):
+    """Save an uploaded photo and set doctor["photo"].
+    Returns an error message, or None on success. The caller must save the doctors file."""
+    if not file_storage or not file_storage.filename:
+        return "No photo selected."
+    data = file_storage.read()
+    ext = _detect_image_ext(data)
+    if not ext:
+        return "Please upload a JPG, PNG or WEBP image."
+    os.makedirs(PHOTO_DIR, exist_ok=True)
+    filename = f"doctor_{doctor['id']}_{int(time.time())}.{ext}"
+    with open(os.path.join(PHOTO_DIR, filename), "wb") as f:
+        f.write(data)
+    delete_doctor_photo(doctor)  # remove the previous photo
+    doctor["photo"] = filename
+    return None
+
+
+@app.route("/admin/doctor/<int:doctor_id>/photo", methods=["POST"])
+def upload_doctor_photo(doctor_id):
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    doctors = load_data(DOCTORS_FILE)
+    doctor = next((d for d in doctors if d["id"] == doctor_id), None)
+    if not doctor:
+        flash("Doctor not found.", "error")
+        return redirect(url_for("admin_dashboard"))
+    error = save_doctor_photo(doctor, request.files.get("photo"))
+    if error:
+        flash(error, "error")
+    else:
+        save_data(DOCTORS_FILE, doctors)
+        flash(f"Photo updated for {doctor['name']}.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/doctor/<int:doctor_id>/photo/remove", methods=["POST"])
+def remove_doctor_photo(doctor_id):
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    doctors = load_data(DOCTORS_FILE)
+    doctor = next((d for d in doctors if d["id"] == doctor_id), None)
+    if not doctor:
+        flash("Doctor not found.", "error")
+    elif not doctor.get("photo"):
+        flash("This doctor has no uploaded photo.", "error")
+    else:
+        delete_doctor_photo(doctor)
+        doctor.pop("photo", None)
+        save_data(DOCTORS_FILE, doctors)
+        flash(f"Photo removed for {doctor['name']}.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.errorhandler(413)
+def photo_too_large(e):
+    flash("Photo is too large. Maximum size is 3 MB.", "error")
+    return redirect(url_for("admin_dashboard"))
+
+
+# ---------------- DOCTOR PROFILE DETAILS ----------------
+# Optional text fields shown in the "Details" popup (name -> max length)
+DETAIL_FIELDS = {
+    "qualification": 120,   # e.g. MBBS, FCPS (Cardiology)
+    "university": 120,      # where the doctor studied
+    "hospital": 120,        # current hospital / clinic
+    "pmdc": 40,             # PMDC registration number
+    "languages": 120,
+    "about": 600,
+}
+
+
+def apply_doctor_details(doctor, form):
+    """Copy the optional profile fields from a submitted form onto the doctor dict.
+    Empty values are removed so they simply do not show on the website."""
+    for key, limit in DETAIL_FIELDS.items():
+        value = form.get(key, "").strip()[:limit]
+        if value:
+            doctor[key] = value
+        else:
+            doctor.pop(key, None)
+    years = form.get("experience", "").strip()
+    if years.isdigit() and 0 <= int(years) <= 70:
+        doctor["experience"] = int(years)
+    else:
+        doctor.pop("experience", None)
+
+
+@app.route("/admin/doctor/<int:doctor_id>/details", methods=["POST"])
+def update_doctor_details(doctor_id):
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    doctors = load_data(DOCTORS_FILE)
+    doctor = next((d for d in doctors if d["id"] == doctor_id), None)
+    if not doctor:
+        flash("Doctor not found.", "error")
+    else:
+        apply_doctor_details(doctor, request.form)
+        save_data(DOCTORS_FILE, doctors)
+        flash(f"Details updated for {doctor['name']}.", "success")
+    return redirect(url_for("admin_dashboard"))
+
 
 @app.route("/admin/add-doctor", methods=["POST"])
 def add_doctor():
@@ -484,9 +449,8 @@ def add_doctor():
     except:
         fee = 0
 
-    email = request.form.get("email", "").strip()
-    if not name or not specialty or not email:
-        flash("Doctor name, specialty, and email are required.", "error")
+    if not name or not specialty:
+        flash("Name and Specialty are required.", "error")
         return redirect(url_for("admin_dashboard"))
 
     doctor = {
@@ -496,40 +460,27 @@ def add_doctor():
         "area": area,
         "days": [d.strip() for d in days.split(",") if d.strip()],
         "time": time,
-        "fee": fee,
-        "email": email,
-        "phone": request.form.get("phone", "").strip()
+        "fee": fee
     }
+    photo = request.files.get("photo")
+    photo_error = save_doctor_photo(doctor, photo) if photo and photo.filename else None
+    apply_doctor_details(doctor, request.form)
     doctors.append(doctor)
     save_data(DOCTORS_FILE, doctors)
     flash(f"Doctor added: {name}", "success")
+    if photo_error:
+        flash(f"Photo not saved: {photo_error}", "error")
     return redirect(url_for("admin_dashboard"))
 
-
-@app.route("/admin/doctor/<int:doctor_id>/contact", methods=["POST"])
-def update_doctor_contact(doctor_id):
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    doctors = load_data(DOCTORS_FILE)
-    doctor = next((d for d in doctors if isinstance(d, dict) and d.get("id") == doctor_id), None)
-    if not doctor:
-        flash("Doctor not found.", "error")
-        return redirect(url_for("admin_dashboard"))
-    email = request.form.get("email", "").strip()
-    if not email:
-        flash("Doctor email is required to receive booking notifications.", "error")
-        return redirect(url_for("admin_dashboard"))
-    doctor["email"] = email
-    doctor["phone"] = request.form.get("phone", "").strip()
-    save_data(DOCTORS_FILE, doctors)
-    flash(f"Contact details updated for {doctor.get('name', 'doctor')}.", "success")
-    return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/remove-doctor/<int:doctor_id>", methods=["POST"])
 def remove_doctor(doctor_id):
     if not session.get("admin"):
         return redirect(url_for("admin_login"))
     doctors = load_data(DOCTORS_FILE)
+    for d in doctors:
+        if d["id"] == doctor_id:
+            delete_doctor_photo(d)
     doctors = [d for d in doctors if d["id"] != doctor_id]
     save_data(DOCTORS_FILE, doctors)
     flash("Doctor removed.", "success")
@@ -547,295 +498,8 @@ def mark_done(appt_id):
     save_data(APPOINTMENTS_FILE, appointments)
     flash("Marked as done.", "success")
     return redirect(url_for("admin_dashboard"))
-    flash("Marked as done.", "success")
-    return redirect(url_for("admin_dashboard"))# ==================== FEEDBACK ROUTES ====================
-@app.route("/feedback", methods=["GET", "POST"])
-def feedback():
-    if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        phone = request.form.get("phone", "").strip()
-        rating = request.form.get("rating", "5")
-        message = request.form.get("message", "").strip()
-        doctor_name = request.form.get("doctor_name", "").strip()
-
-        if not name or not message:
-            flash("Name and message are required.", "error")
-            return render_template("feedback.html")
-
-        feedbacks = load_data("feedbacks.json")
-        if not isinstance(feedbacks, list):
-            feedbacks = []
-
-        new_fb = {
-            "id": len(feedbacks) + 1,
-            "name": name,
-            "phone": phone,
-            "rating": rating,
-            "message": message,
-            "doctor_name": doctor_name,
-            "time": datetime.now().isoformat()
-        }
-        feedbacks.append(new_fb)
-        save_data("feedbacks.json", feedbacks)
-
-        flash("Thank you for your feedback! ✅", "success")
-        return redirect(url_for("feedback"))
-
-    return render_template("feedback.html")
-
-
-# ==================== REFUND ROUTES ====================
-@app.route("/admin/feedback-refunds")
-def admin_feedback_refunds():
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-
-    feedbacks = load_data("feedbacks.json")
-    if not isinstance(feedbacks, list):
-        feedbacks = []
-
-    refunds = load_data("refunds.json")
-    if not isinstance(refunds, list):
-        refunds = []
-
-    # List of paid appointments available for refund
-    appointments = load_data(APPOINTMENTS_FILE)
-    refundable = [a for a in appointments if a.get("payment_status") == "Paid"]
-
-    return render_template("admin_feedback_refunds.html",
-                           feedbacks=feedbacks,
-                           refunds=refunds,
-                           refundable=refundable)
-
-
-@app.route("/admin/appointment/<int:appt_id>/refund", methods=["POST"])
-def refund_appointment(appt_id):
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-
-    appointments = load_data(APPOINTMENTS_FILE)
-    target = next((a for a in appointments if a["id"] == appt_id), None)
-
-    if not target:
-        flash("Appointment not found.", "error")
-        return redirect(url_for("admin_feedback_refunds"))
-
-    if target.get("payment_status") != "Paid":
-        flash("⛔ Cannot refund: not a paid appointment.", "error")
-        return redirect(url_for("admin_feedback_refunds"))
-
-    # Mark appointment as refunded
-    target["payment_status"] = "Refunded"
-    target["status"] = "Refunded"
-    target["refunded_at"] = datetime.now().isoformat()
-    target["refunded_by"] = session.get("admin_name", "Admin")
-    target["refund_amount"] = target.get("fee", 0)
-    save_data(APPOINTMENTS_FILE, appointments)
-
-    # Save to refunds log
-    refunds = load_data("refunds.json")
-    if not isinstance(refunds, list):
-        refunds = []
-
-    refunds.append({
-        "id": len(refunds) + 1,
-        "appt_id": appt_id,
-        "patient_name": target.get("patient_name"),
-        "phone": target.get("phone"),
-        "doctor_name": target.get("doctor_name"),
-        "amount": target.get("fee", 0),
-        "method": target.get("payment_method", "N/A"),
-        "refunded_by": session.get("admin_name", "Admin"),
-        "refunded_at": datetime.now().isoformat()
-    })
-    save_data("refunds.json", refunds)
-
-    flash(f"✅ Refunded Rs. {target.get('fee', 0)} to {target.get('patient_name')}.", "success")
-    return redirect(url_for("admin_feedback_refunds"))
-
-
-@app.route("/")
-def index():
-    doctors = load_data(DOCTORS_FILE) or []
-    appointments = load_data(APPOINTMENTS_FILE) or []
-    if not isinstance(doctors, list):
-        doctors = []
-    if not isinstance(appointments, list):
-        appointments = []
-
-    total_doctors = len(doctors)
-    total_appointments = len(appointments)
-    specialties = sorted(set(d.get("specialty", "") for d in doctors if isinstance(d, dict)))
-
-    return render_template("index.html",
-                           total_doctors=total_doctors,
-                           total_appointments=total_appointments,
-                           specialties=specialties)
 
 
 if __name__ == "__main__":
     # Debug OFF for production / live use — prevents auto-restart data loss
     app.run(host="0.0.0.0", port=5000, debug=False)
-# ==================== APPOINTMENT ACTION ROUTES ====================
-
-@app.route("/admin/appointment/<int:appt_id>/accept", methods=["POST"])
-def accept_appointment(appt_id):
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    appointments = load_data(APPOINTMENTS_FILE) or []
-    for a in appointments:
-        if isinstance(a, dict) and a.get("id") == appt_id:
-            a["status"] = "Confirmed"
-    save_data(APPOINTMENTS_FILE, appointments)
-    flash("Appointment confirmed.", "success")
-    return redirect(url_for("admin_dashboard"))
-
-
-@app.route("/admin/appointment/<int:appt_id>/reject", methods=["POST"])
-def reject_appointment(appt_id):
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    appointments = load_data(APPOINTMENTS_FILE) or []
-    for a in appointments:
-        if isinstance(a, dict) and a.get("id") == appt_id:
-            a["status"] = "Rejected"
-    save_data(APPOINTMENTS_FILE, appointments)
-    flash("Appointment rejected.", "success")
-    return redirect(url_for("admin_dashboard"))
-
-
-
-@app.route("/admin/appointment/<int:appt_id>/verify-payment", methods=["POST"])
-def verify_payment(appt_id):
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    appointments = load_data(APPOINTMENTS_FILE) or []
-    for a in appointments:
-        if isinstance(a, dict) and a.get("id") == appt_id:
-            a["payment_status"] = "Paid"
-            a["status"] = "Paid"
-    save_data(APPOINTMENTS_FILE, appointments)
-    flash("Payment verified.", "success")
-    return redirect(url_for("admin_dashboard"))
-
-
-@app.route("/admin/appointment/<int:appt_id>/reject-payment", methods=["POST"])
-def reject_payment(appt_id):
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    appointments = load_data(APPOINTMENTS_FILE) or []
-    for a in appointments:
-        if isinstance(a, dict) and a.get("id") == appt_id:
-            a["payment_status"] = "Unpaid"
-            a["status"] = "Confirmed"
-            a["payment_ref"] = ""
-    save_data(APPOINTMENTS_FILE, appointments)
-    flash("Payment rejected.", "success")
-    return redirect(url_for("admin_dashboard"))
-
-
-@app.route("/admin/appointment/<int:appt_id>/refund", methods=["POST"])
-def refund_appointment(appt_id):
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    appointments = load_data(APPOINTMENTS_FILE) or []
-    target = None
-    for a in appointments:
-        if isinstance(a, dict) and a.get("id") == appt_id:
-            target = a
-            break
-    if not target:
-        flash("Appointment not found.", "error")
-        return redirect(url_for("admin_dashboard"))
-
-    if target.get("payment_status") != "Paid":
-        flash("Cannot refund: not a paid appointment.", "error")
-        return redirect(url_for("admin_dashboard"))
-
-    target["payment_status"] = "Refunded"
-    target["status"] = "Refunded"
-    target["refunded_at"] = datetime.now().isoformat()
-    target["refunded_by"] = session.get("admin_name", "Admin")
-    target["refund_amount"] = target.get("fee", 0)
-    save_data(APPOINTMENTS_FILE, appointments)
-
-    refunds = load_data("refunds.json")
-    if not isinstance(refunds, list):
-        refunds = []
-    refunds.append({
-        "id": len(refunds) + 1,
-        "appt_id": appt_id,
-        "patient_name": target.get("patient_name"),
-        "phone": target.get("phone"),
-        "doctor_name": target.get("doctor_name"),
-        "amount": target.get("fee", 0),
-        "method": target.get("payment_method", "N/A"),
-        "refunded_by": session.get("admin_name", "Admin"),
-        "refunded_at": datetime.now().isoformat()
-    })
-    save_data("refunds.json", refunds)
-
-    flash(f"Refunded Rs. {target.get('fee', 0)}.", "success")
-    return redirect(url_for("admin_feedback_refunds") if "admin_feedback_refunds" in [r.endpoint for r in app.url_map.iter_rules()] else url_for("admin_dashboard"))
-
-
-# ==================== OTHER ADMIN PAGES ====================
-
-@app.route("/admin/analytics")
-def admin_analytics():
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    data = load_data(ANALYTICS_FILE) or {}
-    visits = data.get("visits", []) if isinstance(data, dict) else []
-    total = data.get("total", len(visits)) if isinstance(data, dict) else len(visits)
-    now = datetime.now()
-    last_24h = [v for v in visits if v.get("time") and (now - datetime.fromisoformat(v["time"])).total_seconds() < 86400]
-    page_counts = {}
-    for v in visits:
-        p = v.get("path", "/")
-        page_counts[p] = page_counts.get(p, 0) + 1
-    device_counts = {"Mobile": 0, "Desktop": 0, "Tablet": 0}
-    for v in visits:
-        d = v.get("device", "Desktop")
-        device_counts[d] = device_counts.get(d, 0) + 1
-    unique_ips = len(set(v.get("ip", "") for v in visits if v.get("ip")))
-    recent = sorted(visits, key=lambda x: x.get("time", ""), reverse=True)[:20]
-    sorted_pages = sorted(page_counts.items(), key=lambda x: x[1], reverse=True)
-    return render_template("analytics.html",
-                           total=total, last_24h=len(last_24h),
-                           unique_ips=unique_ips, page_counts=sorted_pages,
-                           device_counts=device_counts, recent=recent)
-
-
-@app.route("/admin/backups")
-def admin_backups():
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    if not os.path.exists("backups"):
-        os.makedirs("backups")
-    files = sorted(os.listdir("backups"), reverse=True)
-    return render_template("backups.html", files=files)
-
-
-@app.route("/admin/audit")
-def admin_audit():
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    logs = load_data("audit_log.json")
-    if not isinstance(logs, list):
-        logs = []
-    logs = sorted(logs, key=lambda x: x.get("time", ""), reverse=True)[:100]
-    return render_template("audit.html", logs=logs)
-
-
-@app.route("/admin/team")
-def admin_team():
-    if not session.get("admin"):
-        return redirect(url_for("admin_login"))
-    team = []
-    for username, info in ADMINS.items():
-        team.append({"username": username, "name": info["name"], "role": info["role"]})
-    return render_template("team.html", team=team)
-
-
-
