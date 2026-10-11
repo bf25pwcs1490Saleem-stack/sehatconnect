@@ -7,13 +7,11 @@ import threading
 from datetime import datetime, timedelta
 import time
 app = Flask(__name__)
-app.secret_key = "sehatconnect_secret_key_2026"
+app.secret_key = os.environ.get("SECRET_KEY") or "dev-only-change-me-" + os.environ.get("COMPUTERNAME", "local")
 app.config["MAX_CONTENT_LENGTH"] = 3 * 1024 * 1024  # 3 MB upload limit (doctor photos)
 
 DOCTORS_FILE = "doctors.json"
 APPOINTMENTS_FILE = "appointments.json"
-ADMIN_PASSWORD = "admin123"
-
 # ==================== ADMIN ACCOUNTS ====================
 ADMINS = {
     "admin": {
@@ -37,8 +35,6 @@ ADMINS = {
         "role": "admin"
     },
 }
-
-ADMIN_PASSWORD = "admin123"
 
 
 # ---------------- HELPERS ----------------
@@ -213,6 +209,7 @@ def book(doctor_id):
 
         for a in appointments:
             if (a["doctor_id"] == doctor_id
+                    and a.get("status") not in ("Cancelled", "Rejected")
                     and a["date"] == date
                     and a["time"].lower() == time.lower()):
                 flash("This slot is already booked. Please choose another time.", "error")
@@ -252,11 +249,15 @@ def my_appointments():
 
 @app.route("/cancel/<int:appt_id>", methods=["POST"])
 def cancel(appt_id):
+    phone = request.form.get("phone", "").strip()
     appointments = load_data(APPOINTMENTS_FILE)
-    appointments = [a for a in appointments if a["id"] != appt_id]
-    save_data(APPOINTMENTS_FILE, appointments)
-    flash("Appointment cancelled.", "success")
-    phone = request.form.get("phone", "")
+    target = next((a for a in appointments if a["id"] == appt_id and a["phone"] == phone), None)
+    if not target:
+        flash("Appointment not found for this phone number.", "error")
+    else:
+        target["status"] = "Cancelled"
+        save_data(APPOINTMENTS_FILE, appointments)
+        flash("Appointment cancelled.", "success")
     return redirect(url_for("my_appointments", phone=phone))
 
 
@@ -276,15 +277,6 @@ def admin_login():
             flash(f"Welcome, {ADMINS[username]['name']}!", "success")
             return redirect(url_for("admin_dashboard"))
 
-        # Fallback: password only (for backward compatibility)
-        if pwd == ADMIN_PASSWORD:
-            session["admin"] = True
-            session["admin_username"] = "admin"
-            session["admin_name"] = "Admin"
-            session["admin_role"] = "superadmin"
-            flash("Welcome, Admin!", "success")
-            return redirect(url_for("admin_dashboard"))
-
         flash("Wrong username or password.", "error")
     return render_template("admin_login.html")
 
@@ -301,9 +293,37 @@ def admin_dashboard():
         return redirect(url_for("admin_login"))
     doctors = load_data(DOCTORS_FILE)
     appointments = load_data(APPOINTMENTS_FILE)
+    now = datetime.now()
+    today = now.strftime("%Y-%m-%d")
+
+    # last 7 days chart
+    days = [(now - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(6, -1, -1)]
+    chart_labels = [datetime.strptime(d, "%Y-%m-%d").strftime("%a") for d in days]
+    chart_data = [sum(1 for a in appointments if a.get("date") == d) for d in days]
+
+    # specialties chart
+    counts = {}
+    for d in doctors:
+        counts[d["specialty"]] = counts.get(d["specialty"], 0) + 1
+
+    active = [a for a in appointments if a.get("status") not in ("Cancelled", "Rejected")]
+    upcoming = sorted([a for a in active if a.get("date", "") >= today],
+                      key=lambda a: (a.get("date", ""), a.get("time", "")))[:5]
+
     return render_template("admin.html",
                            doctors=doctors,
-                           appointments=appointments)
+                           appointments=appointments,
+                           now=now,
+                           total_doctors=len(doctors),
+                           total_patients=len({a["phone"] for a in appointments}),
+                           today_appointments=sum(1 for a in appointments if a.get("date") == today),
+                           pending_requests=sum(1 for a in appointments if a.get("status") == "Pending"),
+                           recent_appointments=list(reversed(appointments))[:8],
+                           upcoming=upcoming,
+                           chart_labels=chart_labels,
+                           chart_data=chart_data,
+                           specialty_labels=list(counts.keys()),
+                           specialty_data=list(counts.values()))
 
 
 # ---------------- DOCTOR PHOTO UPLOAD ----------------
@@ -498,6 +518,98 @@ def mark_done(appt_id):
     save_data(APPOINTMENTS_FILE, appointments)
     flash("Marked as done.", "success")
     return redirect(url_for("admin_dashboard"))
+
+
+# ---------------- DOCTOR CONTACT (admin) ----------------
+@app.route("/admin/doctor/<int:doctor_id>/contact", methods=["POST"])
+def update_doctor_contact(doctor_id):
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    doctors = load_data(DOCTORS_FILE)
+    doctor = next((d for d in doctors if d["id"] == doctor_id), None)
+    if not doctor:
+        flash("Doctor not found.", "error")
+    else:
+        doctor["email"] = request.form.get("email", "").strip()[:120]
+        doctor["phone"] = request.form.get("phone", "").strip()[:40]
+        save_data(DOCTORS_FILE, doctors)
+        flash(f"Contact saved for {doctor['name']}.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+# ---------------- FEEDBACK ----------------
+@app.route("/feedback", methods=["GET", "POST"])
+def feedback():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        phone = request.form.get("phone", "").strip()
+        rating = request.form.get("rating", "5").strip()
+        message = request.form.get("comments", "").strip()
+        if not name or not message:
+            flash("Name and comments are required.", "error")
+            return render_template("feedback.html")
+        feedbacks = load_data("feedbacks.json")
+        if not isinstance(feedbacks, list):
+            feedbacks = []
+        feedbacks.append({
+            "id": next_id(feedbacks),
+            "name": name,
+            "phone": phone,
+            "rating": int(rating) if rating.isdigit() and 1 <= int(rating) <= 5 else 5,
+            "message": message,
+            "time": datetime.now().isoformat(),
+        })
+        save_data("feedbacks.json", feedbacks)
+        flash("Thank you for your feedback!", "success")
+        return redirect(url_for("feedback"))
+    return render_template("feedback.html")
+
+
+# ---------------- FEEDBACK & REFUNDS (admin) ----------------
+@app.route("/admin/feedback-refunds")
+def admin_feedback_refunds():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    feedbacks = load_data("feedbacks.json")
+    refunds = load_data("refunds.json")
+    if not isinstance(feedbacks, list):
+        feedbacks = []
+    if not isinstance(refunds, list):
+        refunds = []
+    refundable = [a for a in load_data(APPOINTMENTS_FILE) if a.get("payment_status") == "Paid"]
+    return render_template("admin_feedback_refunds.html",
+                           feedbacks=list(reversed(feedbacks)),
+                           refunds=list(reversed(refunds)),
+                           refundable=refundable)
+
+
+@app.route("/admin/appointment/<int:appt_id>/refund", methods=["POST"])
+def refund_appointment(appt_id):
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    appointments = load_data(APPOINTMENTS_FILE)
+    target = next((a for a in appointments if a["id"] == appt_id), None)
+    if not target or target.get("payment_status") != "Paid":
+        flash("Cannot refund: not a paid appointment.", "error")
+        return redirect(url_for("admin_feedback_refunds"))
+    now = datetime.now().isoformat()
+    admin_name = session.get("admin_name", "Admin")
+    target.update(payment_status="Refunded", status="Refunded", refunded_at=now,
+                  refunded_by=admin_name, refund_amount=target.get("fee", 0))
+    save_data(APPOINTMENTS_FILE, appointments)
+    refunds = load_data("refunds.json")
+    if not isinstance(refunds, list):
+        refunds = []
+    refunds.append({
+        "id": next_id(refunds), "appt_id": appt_id,
+        "patient_name": target.get("patient_name"), "phone": target.get("phone"),
+        "doctor_name": target.get("doctor_name"), "amount": target.get("fee", 0),
+        "method": target.get("payment_method", "N/A"),
+        "refunded_by": admin_name, "refunded_at": now,
+    })
+    save_data("refunds.json", refunds)
+    flash(f"Refunded Rs. {target.get('fee', 0)} to {target.get('patient_name')}.", "success")
+    return redirect(url_for("admin_feedback_refunds"))
 
 
 if __name__ == "__main__":
