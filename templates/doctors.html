@@ -1,21 +1,29 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon, doctor_img %}
 {% block title %}Doctors — SehatConnect{% endblock %}
 
-{% block content %}
-<h1>Our Doctors</h1>
+{% block hero %}
+<section class="page-banner">
+  <div class="container">
+    <h1>Our Doctors</h1>
+    <p>Search by name, specialty or area, then book in a minute.</p>
+  </div>
+</section>
+{% endblock %}
 
+{% block content %}
 <form method="GET" action="{{ url_for('doctors') }}" class="search-form">
   <input type="text" name="q" placeholder="Search by name, specialty, or area..." value="{{ q }}">
   <select name="specialty">
     <option value="">All Specialties</option>
     {% for s in specialties %}
-      <option value="{{ s }}" {% if s == selected_specialty %}selected{% endif %}>{{ s }}</option>
+      <option value="{{ s }}" {% if s == selected_specialty %}selected{% endif %}>{{ s[:1]|upper ~ s[1:] }}</option>
     {% endfor %}
   </select>
   <select name="area">
     <option value="">All Areas</option>
     {% for a in areas %}
-      <option value="{{ a }}" {% if a == selected_area %}selected{% endif %}>{{ a }}</option>
+      <option value="{{ a }}" {% if a == selected_area %}selected{% endif %}>{{ a[:1]|upper ~ a[1:] }}</option>
     {% endfor %}
   </select>
   <button type="submit" class="btn btn-primary">Search</button>
@@ -24,18 +32,80 @@
 {% if doctors %}
   <div class="doctor-grid">
     {% for d in doctors %}
-      <div class="doctor-card">
-        <h3>{{ d.name }}</h3>
-        <p class="specialty">{{ d.specialty }}</p>
-        {% if d.area %}<p class="area">📍 {{ d.area }}</p>{% endif %}
-        <p class="days">🗓️ {{ d.days|join(', ') }}</p>
-        <p class="time">⏰ {{ d.time }}</p>
-        <p class="fee">Fee: Rs. {{ d.fee }}</p>
-        <a href="{{ url_for('book', doctor_id=d.id) }}" class="btn btn-primary">Book Appointment</a>
-      </div>
+      <article class="doctor-card">
+        {# Photo: uploaded from the Admin page — falls back to an icon if there is no photo #}
+        <div class="doctor-photo">
+          <span class="photo-fallback">{{ icon("user") }}</span>
+          {{ doctor_img(d) }}
+        </div>
+
+        <div class="doctor-body">
+          <h3>{{ d.name }}</h3>
+          <span class="specialty">{{ d.specialty }}</span>
+          {% if d.qualification %}<p class="qual">{{ d.qualification }}</p>{% endif %}
+
+          <ul class="meta">
+            {% if d.experience %}<li>{{ icon("stethoscope") }}<span>{{ d.experience }} year{{ '' if d.experience == 1 else 's' }} experience</span></li>{% endif %}
+            {% if d.area %}<li class="area">{{ icon("pin") }}<span class="cap">{{ d.area }}</span></li>{% endif %}
+            <li class="days">{{ icon("calendar") }}<span class="cap-first">{{ d.days|join(', ') }}</span></li>
+            <li class="time">{{ icon("clock") }}<span>{{ d.time }}</span></li>
+          </ul>
+
+          <div class="doctor-foot">
+            <div class="fee"><small>Consultation fee</small>Rs. {{ d.fee }}</div>
+          </div>
+          <div class="doctor-actions">
+            <button type="button" class="btn btn-outline btn-sm" data-open="doc-{{ d.id }}">Details</button>
+            <a href="{{ url_for('book', doctor_id=d.id) }}" class="btn btn-primary btn-sm">Book Now</a>
+          </div>
+        </div>
+      </article>
+
+      {# ---- Details popup for this doctor ---- #}
+      <dialog class="doctor-modal" id="doc-{{ d.id }}" aria-label="Details of {{ d.name }}">
+        <button type="button" class="modal-close" data-close aria-label="Close">{{ icon("close") }}</button>
+        <div class="doctor-photo doctor-photo-lg">
+          <span class="photo-fallback">{{ icon("user") }}</span>
+          {{ doctor_img(d) }}
+        </div>
+        <div class="modal-body">
+          <h2>{{ d.name }}</h2>
+          <span class="specialty">{{ d.specialty }}</span>
+          {% if d.hospital %}<p class="hospital">{{ icon("pin") }} {{ d.hospital }}</p>{% endif %}
+
+          <div class="facts">
+            {% if d.experience %}<div class="fact"><strong>{{ d.experience }} yrs</strong><span>Experience</span></div>{% endif %}
+            <div class="fact"><strong>Rs. {{ d.fee }}</strong><span>Consultation fee</span></div>
+            {% if d.pmdc %}<div class="fact"><strong>{{ d.pmdc }}</strong><span>PMDC reg. no.</span></div>{% endif %}
+          </div>
+
+          {% if d.about %}
+            <h4 class="modal-heading">About</h4>
+            <p class="about">{{ d.about }}</p>
+          {% endif %}
+
+          {% if d.qualification or d.university or d.languages %}
+            <h4 class="modal-heading">Qualification &amp; education</h4>
+            {% if d.qualification %}<p class="detail-line"><strong>Qualification</strong><span>{{ d.qualification }}</span></p>{% endif %}
+            {% if d.university %}<p class="detail-line"><strong>Studied at</strong><span>{{ d.university }}</span></p>{% endif %}
+            {% if d.languages %}<p class="detail-line"><strong>Languages</strong><span>{{ d.languages }}</span></p>{% endif %}
+          {% endif %}
+
+          <h4 class="modal-heading">Availability</h4>
+          <p class="detail-line"><strong>Area</strong><span class="cap">{{ d.area or "—" }}</span></p>
+          <p class="detail-line"><strong>Days</strong><span class="cap-first">{{ d.days|join(', ') }}</span></p>
+          <p class="detail-line"><strong>Timing</strong><span>{{ d.time }}</span></p>
+
+          {% if not (d.about or d.qualification or d.university or d.experience or d.hospital) %}
+            <p class="muted-note">More details about this doctor will be added soon.</p>
+          {% endif %}
+
+          <a href="{{ url_for('book', doctor_id=d.id) }}" class="btn btn-primary btn-block">{{ icon("calendar") }} Book Appointment</a>
+        </div>
+      </dialog>
     {% endfor %}
   </div>
 {% else %}
-  <p class="empty">No doctors found. Try a different search.</p>
+  <div class="empty">{{ icon("search") }}<p>No doctors found. Try a different search.</p></div>
 {% endif %}
 {% endblock %}
